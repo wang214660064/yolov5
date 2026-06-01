@@ -124,14 +124,14 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         model = Model(cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
         exclude = ['anchor'] if (cfg or hyp.get('anchors')) and not resume else []  # exclude keys
         csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
-        csd = intersect_dicts(csd, model.state_dict(), exclude=exclude)  # intersect cfg与ckpt['model']不一致时，取交集
+        csd = intersect_dicts(csd, model.state_dict(), exclude=exclude)  # intersect
         model.load_state_dict(csd, strict=False)  # load
         LOGGER.info(f'Transferred {len(csd)}/{len(model.state_dict())} items from {weights}')  # report
     else:
         model = Model(cfg, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
-    amp = check_amp(model)  # check AMP 是否支持混合精度训练
+    amp = check_amp(model)  # check AMP
 
-    # Freeze [10] model.0 model.1 model.2
+    # Freeze
     freeze = [f'model.{x}.' for x in (freeze if len(freeze) > 1 else range(freeze[0]))]  # layers to freeze
     for k, v in model.named_parameters():
         v.requires_grad = True  # train all layers
@@ -183,7 +183,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).to(device)
         LOGGER.info('Using SyncBatchNorm()')
 
-    # Trainloader 重点函数。后面再看。
+    # Trainloader
     train_loader, dataset = create_dataloader(train_path,
                                               imgsz,
                                               batch_size // WORLD_SIZE,
@@ -195,7 +195,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                                               rect=opt.rect,
                                               rank=LOCAL_RANK,
                                               workers=workers,
-                                              image_weights=opt.image_weights, # 没有实现，想象中的图像的过超样的功能。
+                                              image_weights=opt.image_weights,
                                               quad=opt.quad,
                                               prefix=colorstr('train: '),
                                               shuffle=True)
@@ -432,172 +432,39 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
 def parse_opt(known=False):
     parser = argparse.ArgumentParser()
-    """
-    argparse 专门来管理参数的库
-    default = 填充具体值
-    Root是根目录:https://github.com/ultralytics/yolov5/releases/tag/v7.0 下载对应的初始预训练权重.
-    
-    重要
-    """
-    old_path =ROOT / 'yolov5s.pt'
-    # path = r"D:\AI_Tutorial_Related\yolov5-7.0\yolov5-7.0\runs\train\exp34\weights\last.pt"
-    path = r"D:\AI_Tutorial_Related\yolov5-7.0\yolov5-7.0\runs\train\exp2\weights\last.pt"
-    parser.add_argument('--weights', type=str, default=path, help='initial weights path')
-    """
-    模型配置文件:填充yaml文件
-    
-    weights和cfg规则：
-    1. 当weights 不为空时，cfg为空，则加载weights中的模型。开放域的时候用. 大部分时间用。
-        --weights, default = ".pt"
-        --cfg, default = ""
-        
-    2. 当weights为空，cfg不为空时，则加载cfg中的模型。但时此时无预训练权重。 工业域时用。
-        --weights, default = ""
-        --cfg, default = ".yaml"
-        
-    3. 当weights与cfg模型的结构一样时，就是给cfg赋初始weights。 跟步骤1相同。
-        --weights, default = ".pt"  
-        --cfg, default = ".yaml"
-    
-    4. 当weights与cfg模型不一样时，取交集赋weights . 第一个版本训练m模型。m模型效果不错。
-        --weights, default = "m.pt"  
-        --cfg, default = "n.yaml"  可以做到在上一轮最好的weights的基础，继续修改模型。
-        
-        m的权重，部分迁移到n中。n就有一个好的出身。
-        
-        **** 能够继续大模型的初始权重
-        **** 什么时候用初始权重，什么时候不用初始权重？
-        开放域：生活场景，用
-        工业场景：可以尝试先用。也可以尝试不用。
-        
-    """
-    model_path = r"D:\AI_Tutorial_Related\yolov5-7.0\yolov5-7.0\models\yolov5s.yaml"
-    parser.add_argument('--cfg', type=str, default=model_path, help='model.yaml path')
-
-    """配置训练数据源 重要"""
+    parser.add_argument('--weights', type=str, default=ROOT / 'yolov5s.pt', help='initial weights path')
+    parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
-
-    """训练参数数文件地址 重要"""
     parser.add_argument('--hyp', type=str, default=ROOT / 'data/hyps/hyp.scratch-low.yaml', help='hyperparameters path')
-
-    # 训练epoch次数 epoch=50, 100, 300 重要。 注意学习率，数据量，与epoch的关系，以及训练时间。
     parser.add_argument('--epochs', type=int, default=100, help='total training epochs')
-
-    # batch 8，16，32，64 重要
-    parser.add_argument('--batch-size', type=int, default=4, help='total batch size for all GPUs, -1 for autobatch')
-
-    """
-        训练的输入尺寸 640,输出头20,40,80
-        1280，输出头40,80, 160， 如果此时，开了多尺度，输出头可能会动态变成320。 r可能高，误检也可能高。
-        1120, 35,70,140
-        重要
-        
-    """
+    parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
     parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=640, help='train, val image size (pixels)')
-
-    # 矩形训练。
     parser.add_argument('--rect', action='store_true', help='rectangular training')
-
-    r""" 是否在上一轮的基础上继续训练 重要 
-    上一轮中断结束时，最后的权重。需要配合weights参数
-    path = r"D:\AI_Tutorial_Related\yolov5-7.0\yolov5-7.0\runs\train\exp4\weights\last.pt"  放在weights的参数位置 
-    default = True
-    
-    如果开启resume时，修改.py中的参数是无效的。同时修改hyp.scratch-low.yaml文件也是无效的。
-    
-    run\exp\hyp.yaml 或者run\exp\opt.yaml
-    """
-    parser.add_argument('--resume', nargs='?', const=True, default=True, help='resume most recent training')
-
+    parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
-
-    # 训练后有验证。关闭验证
-    parser.add_argument('--noval', action='store_true', default=False, help='only validate final epoch')
-
-    # 不进行自动聚类anchor。只有自己聚类的时候，才default = True
-    parser.add_argument('--noautoanchor', action='store_true', default=False, help='disable AutoAnchor')
-
+    parser.add_argument('--noval', action='store_true', help='only validate final epoch')
+    parser.add_argument('--noautoanchor', action='store_true', help='disable AutoAnchor')
     parser.add_argument('--noplots', action='store_true', help='save no plot files')
     parser.add_argument('--evolve', type=int, nargs='?', const=300, help='evolve hyperparameters for x generations')
     parser.add_argument('--bucket', type=str, default='', help='gsutil bucket')
     parser.add_argument('--cache', type=str, nargs='?', const='ram', help='image --cache ram/disk')
-
-    """
-    重要参数：起到的作用类似分类中的class_weights。过采样。对少的类别进行倾斜。
-    要看一张图中，个体的数量。一共有2个类别。比如A图，1个鸟+5个人。
-    
-    更适合一张图，没有混合多个类的情况。
-    """
-    parser.add_argument('--image-weights', action='store_true',default=True,  help='use weighted image selection for training')
-    """
-    0, 1, 2 代表用3块显卡
-    """
-    parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-
-    """
-    是否开启多尺度训练
-    
-    640标准
-    最小320,最大960
-    0.5, 1.0, 1.5  重要
-    """
-    parser.add_argument('--multi-scale', action='store_true', default=True, help='vary img-size +/- 50%%')
-
-    """
-    是否开启单类训练
-    比如80个类别。开启就只会当1个类别。
-    """
-    parser.add_argument('--single-cls', action='store_true', default=False, help='train multi-class data as single-class')
-
-    """
-    优化器的选择 ，重要参数
-    """
-    parser.add_argument('--optimizer', type=str, choices=['SGD', 'Adam', 'AdamW'], default='AdamW', help='optimizer')
-
-    """
-    多卡训练才开启
-    """
+    parser.add_argument('--image-weights', action='store_true', help='use weighted image selection for training')
+    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--multi-scale', action='store_true', help='vary img-size +/- 50%%')
+    parser.add_argument('--single-cls', action='store_true', help='train multi-class data as single-class')
+    parser.add_argument('--optimizer', type=str, choices=['SGD', 'Adam', 'AdamW'], default='SGD', help='optimizer')
     parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
-
-    """
-    多进程读数据。重要开启。4,6,8之间 ，重要参数
-    """
-    parser.add_argument('--workers', type=int, default=4, help='max dataloader workers (per RANK in DDP mode)')
+    parser.add_argument('--workers', type=int, default=8, help='max dataloader workers (per RANK in DDP mode)')
     parser.add_argument('--project', default=ROOT / 'runs/train', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--quad', action='store_true', help='quad dataloader')
-
-    """
-    是否开启cos退火
-    """
     parser.add_argument('--cos-lr', action='store_true', help='cosine LR scheduler')
-
-    """
-    标签平滑: 降低GT的标准。给标签一个怀疑尺度。实验角度来说，毫无意义。
-    """
-    parser.add_argument('--label-smoothing', type=float, default=0.1, help='Label smoothing epsilon')
-
-    """
-    早停轮次。如果100轮，val集毫无进展，就早停。重要参数.
-    """
-    parser.add_argument('--patience', type=int, default=50, help='EarlyStopping patience (epochs without improvement)')
-
-    """
-    冻结训练: 0代表不冻结。10代表冻结前10层
-    1, 3, 5代表冻结下标为1，3，5的层
-    
-    有针对性的训练。
-    微调：best.pt 已经97%。 再来10张漏检，整个模型全部重新训练有风险，影响best.pt。此时，冻结10层，针对此数据集来微调。 重要参数
-    [3, ] 只冻3
-    [3, 4,5] 冻3,4,5
-    [3]，前3层
-    [p1,p2,p3,p4,p5]
-    """
-    parser.add_argument('--freeze', nargs='+', type=int, default=[10], help='Freeze layers: backbone=10, first3=0 1 2')
+    parser.add_argument('--label-smoothing', type=float, default=0.0, help='Label smoothing epsilon')
+    parser.add_argument('--patience', type=int, default=100, help='EarlyStopping patience (epochs without improvement)')
+    parser.add_argument('--freeze', nargs='+', type=int, default=[0], help='Freeze layers: backbone=10, first3=0 1 2')
     parser.add_argument('--save-period', type=int, default=-1, help='Save checkpoint every x epochs (disabled if < 1)')
-    parser.add_argument('--seed', type=int, default=42, help='Global training seed') # 幸运数
-
+    parser.add_argument('--seed', type=int, default=0, help='Global training seed')
     parser.add_argument('--local_rank', type=int, default=-1, help='Automatic DDP Multi-GPU argument, do not modify')
 
     # Logger arguments
@@ -613,8 +480,8 @@ def main(opt, callbacks=Callbacks()):
     # Checks
     if RANK in {-1, 0}:
         print_args(vars(opt))
-        # check_git_status()
-        # check_requirements()
+        check_git_status()
+        check_requirements()
 
     # Resume (from specified or most recent last.pt)
     if opt.resume and not check_comet_resume(opt) and not opt.evolve:

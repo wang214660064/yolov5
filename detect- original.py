@@ -216,77 +216,23 @@ def run(
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    path = r"D:\AI_Tutorial_Related\yolov5-7.0\yolov5-7.0\runs\train\exp3\weights\best.pt"
-    # path = r"D:\AI_Tutorial_Related\AI Code\轮胎模型\0521_outshoulder_best.onnx"
-    """
-    重要参数：自己训练好的模型的权重 
-    """
-    parser.add_argument('--weights', nargs='+', type=str, default=path, help='model path or triton URL')
-    """
-    重要参数：图片或者视频流都可以
-    """
-    image_path = r"D:\AI_Tutorial_Related\yolov5-7.0\yolov5-7.0\runs\OIP-C.jpg"
-    # image_path = r"D:\AI_Tutorial_Related\AI Code\轮胎模型"
-    # image_path = r"D:\AI_Tutorial_Related\yolov5-7.0\yolov5-7.0\data\coco128\images\val2017"
-    parser.add_argument('--source', type=str, default=image_path, help='file/dir/URL/glob/screen/0(webcam)')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path or triton URL')
+    parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='(optional) dataset.yaml path')
-
-    """
-    重要参数： 推理尺寸。推理尺寸可以不等于训练尺寸
-    """
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
-
-    """
-    重要参数： 置信度
-    """
-    parser.add_argument('--conf-thres', type=float, default=0.4, help='confidence threshold')
-
-    """
-     重要参数：nms的去重置信度
-    """
-    parser.add_argument('--iou-thres', type=float, default=0.25, help='NMS IoU threshold')
-
-    """
-    最多一个图，一共1000个目标
-    """
+    parser.add_argument('--conf-thres', type=float, default=0.25, help='confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.45, help='NMS IoU threshold')
     parser.add_argument('--max-det', type=int, default=1000, help='maximum detections per image')
-
-    """
-    设备
-    """
-    parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='show results')
-
-    """
-     重要参数：是否将预测结果保存为yolo格式的标签
-    1000张，训练得到A模型
-    A模型将后面的2000张来预测，得到2000个标签
-    用labeling，重新打开预测的标签。检查对不对
-    
-    1. 必须要手动设置classes.txt *****
-    """
-    parser.add_argument('--save-txt', action='store_true',default=True,  help='save results to *.txt')
-
+    parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
-
-    """
-    是否将预测的box截图，截下来
-    """
-    parser.add_argument('--save-crop', action='store_true', default=False, help='save cropped prediction boxes')
+    parser.add_argument('--save-crop', action='store_true', help='save cropped prediction boxes')
     parser.add_argument('--nosave', action='store_true', help='do not save images/videos')
     parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --classes 0, or --classes 0 2 3')
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
-    """
-    推理是否进行数据增可。一般为False
-    """
     parser.add_argument('--augment', action='store_true', help='augmented inference')
-
-    """
-     重要参数：将网络层中的间的特征，每层随机选32个通道保存可视化。极其重要参数
-    找几张漏检来分析
-    """
-    parser.add_argument('--visualize', action='store_true', default=False, help='visualize features')
-
+    parser.add_argument('--visualize', action='store_true', help='visualize features')
     parser.add_argument('--update', action='store_true', help='update all models')
     parser.add_argument('--project', default=ROOT / 'runs/detect', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
