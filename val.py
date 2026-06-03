@@ -100,8 +100,8 @@ def run(
         weights=None,  # model.pt path(s)
         batch_size=32,  # batch size
         imgsz=640,  # inference size (pixels)
-        conf_thres=0.001,  # confidence threshold
-        iou_thres=0.6,  # NMS IoU threshold
+        conf_thres=0.001,  # confidence threshold # 此置信度阈值过低，会导致P、R指标失真，只有mAP50指标正常，训练时需在函数中设置死为0.25，Val时设置为0.5
+        iou_thres=0.6,  # NMS IoU threshold # Val时需设置为0.25
         max_det=300,  # maximum detections per image
         task='val',  # train, val, test, speed or study
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
