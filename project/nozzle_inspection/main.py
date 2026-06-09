@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from project.nozzle_inspection.data.dataset_analyzer import DatasetAnalyzer
+from project.nozzle_inspection.data.dataset_preparer import DatasetPreparer
 from project.nozzle_inspection.factories.evaluator_factory import EvaluatorFactory
 from project.nozzle_inspection.factories.model_factory import ModelFactory
 from project.nozzle_inspection.factories.trainer_factory import TrainerFactory
@@ -35,6 +36,12 @@ def build_parser() -> argparse.ArgumentParser:
     analyze = subparsers.add_parser("analyze-data", help="分析数据集并生成 Markdown 报告")
     analyze.add_argument("--dataset", default="../dataset_2", help="待分析数据集根目录")
     analyze.add_argument("--output", default="project/nozzle_inspection/data/dataset_report.md", help="数据分析报告输出路径")
+
+    prepare = subparsers.add_parser("prepare-data", help="去重、转换 NG/OK 标签并重新划分数据集")
+    prepare.add_argument("--dataset", default="../dataset_2", help="原始数据集根目录")
+    prepare.add_argument("--output", default="../outputs/datasets/nozzle_ng_ok_v1", help="衍生数据集输出目录")
+    prepare.add_argument("--val-ratio", type=float, default=0.2, help="验证集比例")
+    prepare.add_argument("--seed", type=int, default=42, help="重划分随机种子")
     return parser
 
 
@@ -84,6 +91,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "analyze-data":
         output_path = DatasetAnalyzer(Path(args.dataset)).write_markdown(Path(args.output))
         print(f"数据分析报告已生成：{output_path}")
+        return 0
+
+    if args.command == "prepare-data":
+        report = DatasetPreparer(
+            source_root=Path(args.dataset),
+            output_root=Path(args.output),
+            val_ratio=args.val_ratio,
+            seed=args.seed,
+        ).prepare()
+        print(f"数据准备完成：{report.output_root}")
+        print(f"候选样本：{report.total_candidates}，重复样本：{report.duplicate_count}")
+        print(f"训练集：{report.train_count}，验证集：{report.val_count}，测试集：{report.test_count}")
         return 0
 
     parser.error("未知命令")

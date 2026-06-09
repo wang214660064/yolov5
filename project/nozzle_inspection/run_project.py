@@ -59,6 +59,19 @@ def build_argv(config: RunConfig) -> list[str]:
             _path(config.dataset_report),
         ]
 
+    if config.action == "prepare_data":
+        return [
+            "prepare-data",
+            "--dataset",
+            _path(config.dataset_root),
+            "--output",
+            _path(config.generated_dataset_root),
+            "--val-ratio",
+            str(config.val_ratio),
+            "--seed",
+            str(config.split_seed),
+        ]
+
     raise ValueError(f"未知运行动作：{config.action}")
 
 
