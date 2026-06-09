@@ -41,6 +41,8 @@ results*.csv
 coco/
 coco128/
 VOC/
+reference_data/
+data/dataset_2/
 
 # MATLAB GitIgnore -----------------------------------------------------------------------------------------------------
 *.m~
