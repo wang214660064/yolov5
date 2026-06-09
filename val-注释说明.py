@@ -100,8 +100,8 @@ def run(
         weights=None,  # model.pt path(s)
         batch_size=32,  # batch size
         imgsz=640,  # inference size (pixels)
-        conf_thres=0.001,  # confidence threshold # 此置信度阈值过低，会导致P、R指标失真，只有mAP50指标正常，训练时需在函数中设置死为0.25，Val时设置为0.5
-        iou_thres=0.6,  # NMS IoU threshold # Val时需设置为0.25
+        conf_thres=0.25,  # confidence threshold
+        iou_thres=0.6,  # NMS IoU threshold
         max_det=300,  # maximum detections per image
         task='val',  # train, val, test, speed or study
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
@@ -125,6 +125,8 @@ def run(
         callbacks=Callbacks(),
         compute_loss=None,
 ):
+    # conf_thres = 0.2
+    # iou_thres = 0.2
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
@@ -337,17 +339,31 @@ def run(
 
 
 def parse_opt():
+    """
+
+    验证集或者有标签的测试集.
+
+    """
     parser = argparse.ArgumentParser()
+    # 训练验证集的yaml文件
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
-    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path(s)')
-    parser.add_argument('--batch-size', type=int, default=32, help='batch size')
+    # 训练权重
+    path = r"D:\AI_Tutorial_Related\yolov5-7.0\yolov5-7.0\runs\train\exp3\weights\best.pt"
+    parser.add_argument('--weights', nargs='+', type=str, default=path, help='model path(s)')
+    parser.add_argument('--batch-size', type=int, default=8, help='batch size')
     parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=640, help='inference size (pixels)')
-    parser.add_argument('--conf-thres', type=float, default=0.001, help='confidence threshold')
+    """
+    重要参数：训练过程中的验证集的置信度评价是0.001
+    看业务情况：
+    """
+    parser.add_argument('--conf-thres', type=float, default=0.5, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.6, help='NMS IoU threshold')
+
+
     parser.add_argument('--max-det', type=int, default=300, help='maximum detections per image')
     parser.add_argument('--task', default='val', help='train, val, test, speed or study')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--workers', type=int, default=8, help='max dataloader workers (per RANK in DDP mode)')
+    parser.add_argument('--workers', type=int, default=4, help='max dataloader workers (per RANK in DDP mode)')
     parser.add_argument('--single-cls', action='store_true', help='treat as single-class dataset')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--verbose', action='store_true', help='report mAP by class')
