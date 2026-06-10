@@ -7,6 +7,7 @@
 - 执行外部命令（如 YOLOv5 训练/验证脚本）
 - 支持 dry-run 模式（只打印命令不执行）
 - 捕获命令输出和错误信息
+- 使用当前 Python 解释器执行命令，确保环境一致性
 
 使用示例：
     runner = ExperimentRunner()
@@ -25,8 +26,12 @@
     )
 """
 
+import sys
 from dataclasses import dataclass
 import subprocess
+
+# 获取当前 Python 解释器路径，确保使用正确的 conda 环境
+_CURRENT_PYTHON = sys.executable
 
 
 @dataclass(frozen=True)
@@ -95,18 +100,25 @@ class ExperimentRunner:
             print(f"退出码: {result.returncode}")
             print(f"输出: {result.stdout}")
         """
+        # 将命令中的 "python" 替换为当前 Python 解释器路径，确保使用正确的 conda 环境
+        # 这样可以避免使用系统默认 Python 导致的环境不一致问题
+        resolved_command = [
+            _CURRENT_PYTHON if cmd == "python" else cmd
+            for cmd in command
+        ]
+
         # dry-run 模式：只打印命令，不执行
         if dry_run:
             return ExperimentResult(
                 command=command,
                 returncode=0,
-                stdout=f"dry-run: {' '.join(command)}",
+                stdout=f"dry-run: {' '.join(resolved_command)}",
                 stderr=""
             )
 
         # 实际执行命令
         completed = subprocess.run(
-            command,           # 命令列表
+            resolved_command,  # 使用解析后的命令（替换了 python 路径）
             cwd=cwd,           # 工作目录
             text=True,         # 输出为文本模式
             capture_output=True,  # 捕获 stdout 和 stderr

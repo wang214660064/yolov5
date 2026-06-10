@@ -8,19 +8,39 @@
 1. 将 RunConfig 配置转换为命令行参数列表
 2. 调用 main 函数执行相应操作
 3. 提供统一的运行入口
+
+按实验流程支持的操作：
+1. prepare_data: 准备数据集
+2. analyze_data: 分析数据集
+3. write_config: 生成数据配置
+4. train: 训练模型
+5. val: 验证模型
+6. report: 生成报告
+
+支持两种运行方式：
+1. 作为模块运行：python -m project.nozzle_inspection.run_project
+2. 直接运行脚本：python project/nozzle_inspection/run_project.py
 """
 
+import sys
 from pathlib import Path
 
-from .main import main
-from .run_config import CONFIG, RunConfig
+# 支持相对导入和直接运行两种方式
+try:
+    from .main import main
+    from .run_config import CONFIG, RunConfig
+except ImportError:
+    # 如果直接运行脚本，添加上级目录到路径
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from project.nozzle_inspection.main import main
+    from project.nozzle_inspection.run_config import CONFIG, RunConfig
 
 
 def build_argv(config: RunConfig) -> list[str]:
     """
     将 RunConfig 配置对象转换为命令行参数列表
     
-    根据配置中的 action 字段，构建对应的命令行参数列表，
+    根据配置中的 action 字段，按实验流程构建对应的命令行参数列表，
     然后传递给 main 函数执行。
     
     参数：
@@ -29,17 +49,51 @@ def build_argv(config: RunConfig) -> list[str]:
     返回值：
         list[str]: 命令行参数列表，格式为 ["command", "--arg1", "value1", ...]
     
-    支持的 action 值：
-        train: 训练模型
-        val: 验证模型
-        report: 生成报告
-        write_config: 生成数据配置
-        analyze_data: 分析数据集
-        prepare_data: 准备数据集
+    按实验流程支持的 action 值：
+        prepare_data: 准备数据集（实验流程第1步）
+        analyze_data: 分析数据集（实验流程第2步）
+        write_config: 生成数据配置（实验流程第3步）
+        train: 训练模型（实验流程第4步）
+        val: 验证模型（实验流程第5步）
+        report: 生成报告（实验流程第6步）
     """
 
+    # 实验流程第1步：构建数据准备命令参数
+    if config.action == "prepare_data":
+        return [
+            "prepare-data",
+            "--dataset",
+            _path(config.dataset_root),
+            "--output",
+            _path(config.generated_dataset_root),
+            "--val-ratio",
+            str(config.val_ratio),
+            "--seed",
+            str(config.split_seed),
+        ]
+
+    # 实验流程第2步：构建数据分析命令参数
+    if config.action == "analyze_data":
+        return [
+            "analyze-data",
+            "--dataset",
+            _path(config.dataset_root),
+            "--output",
+            _path(config.dataset_report),
+        ]
+
+    # 实验流程第3步：构建生成配置文件命令参数
+    if config.action == "write_config":
+        return [
+            "write-config",
+            "--output",
+            _path(config.generated_dataset_yaml),
+            "--path",
+            _path(config.generated_dataset_root),
+        ]
+
+    # 实验流程第4步：构建训练命令参数
     if config.action == "train":
-        # 构建训练命令参数
         argv = [
             "train",
             "--data",
@@ -54,8 +108,8 @@ def build_argv(config: RunConfig) -> list[str]:
             argv.append("--dry-run")
         return argv
 
+    # 实验流程第5步：构建验证命令参数
     if config.action == "val":
-        # 构建验证命令参数
         return [
             "val",
             "--data",
@@ -66,48 +120,14 @@ def build_argv(config: RunConfig) -> list[str]:
             str(config.conf),
         ]
 
+    # 实验流程第6步：构建生成报告命令参数
     if config.action == "report":
-        # 构建生成报告命令参数
         return [
             "report",
             "--output",
             _path(config.report_output),
             "--pptx",
             _path(config.pptx_output),
-        ]
-
-    if config.action == "write_config":
-        # 构建生成配置文件命令参数
-        return [
-            "write-config",
-            "--output",
-            _path(config.generated_dataset_yaml),
-            "--path",
-            _path(config.generated_dataset_root),
-        ]
-
-    if config.action == "analyze_data":
-        # 构建数据分析命令参数
-        return [
-            "analyze-data",
-            "--dataset",
-            _path(config.dataset_root),
-            "--output",
-            _path(config.dataset_report),
-        ]
-
-    if config.action == "prepare_data":
-        # 构建数据准备命令参数
-        return [
-            "prepare-data",
-            "--dataset",
-            _path(config.dataset_root),
-            "--output",
-            _path(config.generated_dataset_root),
-            "--val-ratio",
-            str(config.val_ratio),
-            "--seed",
-            str(config.split_seed),
         ]
 
     # 如果 action 值不在支持列表中，抛出异常

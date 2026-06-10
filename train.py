@@ -15,6 +15,11 @@ Datasets:   https://github.com/ultralytics/yolov5/tree/master/data
 Tutorial:   https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data
 """
 
+# 忽略 Python 弃用警告 新增
+import warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*os\\.system.*')
+warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*torch\\.cuda\\.amp.*')
+
 import argparse
 import math
 import os
@@ -249,7 +254,9 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     maps = np.zeros(nc)  # mAP per class
     results = (0, 0, 0, 0, 0, 0, 0)  # P, R, mAP@.5, mAP@.5-.95, val_loss(box, obj, cls)
     scheduler.last_epoch = start_epoch - 1  # do not move
-    scaler = torch.cuda.amp.GradScaler(enabled=amp)
+    # scaler = torch.cuda.amp.GradScaler(enabled=amp)
+    # 兼容 PyTorch 新版本，使用 torch.amp.GradScaler 替代 torch.cuda.amp.GradScaler
+    scaler = torch.amp.GradScaler('cuda', enabled=amp)
     stopper, stop = EarlyStopping(patience=opt.patience), False
     compute_loss = ComputeLoss(model)  # init loss class
     callbacks.run('on_train_start')
@@ -304,7 +311,9 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     imgs = nn.functional.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
-            with torch.cuda.amp.autocast(amp):
+            # with torch.cuda.amp.autocast(amp):
+            # 兼容 PyTorch 新版本，使用 torch.amp.autocast 替代 torch.cuda.amp.autocast
+            with torch.amp.autocast(device_type='cuda', enabled=amp):
                 pred = model(imgs)  # forward
                 loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
                 if RANK != -1:

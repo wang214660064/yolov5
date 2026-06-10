@@ -1,4 +1,4 @@
-output_root: ../outputs/datasets/nozzle_ng_ok_v1
+output_root: ../outputs/datasets/nozzle_ng_ok_downsampled
 scale_factors:
   - 0.75
   - 1.25

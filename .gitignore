@@ -43,7 +43,7 @@ coco128/
 VOC/
 reference_data/
 data/dataset_2/
-project/outputs/
+project/nozzle_inspection/outputs/
 
 # MATLAB GitIgnore -----------------------------------------------------------------------------------------------------
 *.m~

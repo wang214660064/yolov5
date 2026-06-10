@@ -31,7 +31,12 @@ import cv2
 import IPython
 import numpy as np
 import pandas as pd
-import pkg_resources as pkg
+import warnings
+# import pkg_resources as pkg
+# 忽略 pkg_resources 弃用警告（UserWarning 类型）
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=UserWarning)
+    import pkg_resources as pkg
 import torch
 import torchvision
 import yaml
@@ -205,8 +210,8 @@ class Timeout(contextlib.ContextDecorator):
 class WorkingDirectory(contextlib.ContextDecorator):
     # Usage: @WorkingDirectory(dir) decorator or 'with WorkingDirectory(dir):' context manager
     def __init__(self, new_dir):
-        self.dir = new_dir  # new dir
-        self.cwd = Path.cwd().resolve()  # current dir
+        self.dir = str(new_dir)  # new dir (转换为字符串确保正确处理)
+        self.cwd = str(Path.cwd().resolve())  # current dir (转换为字符串)
 
     def __enter__(self):
         os.chdir(self.dir)
