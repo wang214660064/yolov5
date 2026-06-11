@@ -30,6 +30,11 @@ from pathlib import Path
 os.environ["PYTHONIOENCODING"] = "utf-8"
 os.environ["PYTHONUTF8"] = "1"
 
+# 修正 OMP_NUM_THREADS，避免 libgomp 报错（必须为正整数）
+omp_threads = os.environ.get("OMP_NUM_THREADS", "")
+if omp_threads == "0" or not omp_threads.isdigit():
+    os.environ.pop("OMP_NUM_THREADS", None)
+
 # 支持相对导入和直接运行两种方式
 try:
     from .main import main

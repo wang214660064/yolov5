@@ -31,12 +31,9 @@ import cv2
 import IPython
 import numpy as np
 import pandas as pd
-import warnings
-# import pkg_resources as pkg
-# 忽略 pkg_resources 弃用警告（UserWarning 类型）
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=UserWarning)
-    import pkg_resources as pkg
+from packaging.version import Version
+from packaging.requirements import Requirement
+import importlib.metadata
 import torch
 import torchvision
 import yaml
@@ -373,7 +370,7 @@ def check_python(minimum='3.7.0'):
 
 def check_version(current='0.0.0', minimum='0.0.0', name='version ', pinned=False, hard=False, verbose=False):
     # Check version vs. required version
-    current, minimum = (pkg.parse_version(x) for x in (current, minimum))
+    current, minimum = Version(current), Version(minimum)
     result = (current == minimum) if pinned else (current >= minimum)  # bool
     s = f'WARNING ⚠️ {name}{minimum} is required by YOLOv5, but {name}{current} is currently installed'  # string
     if hard:
@@ -392,7 +389,16 @@ def check_requirements(requirements=ROOT / 'requirements.txt', exclude=(), insta
         file = requirements.resolve()
         assert file.exists(), f"{prefix} {file} not found, check failed."
         with file.open() as f:
-            requirements = [f'{x.name}{x.specifier}' for x in pkg.parse_requirements(f) if x.name not in exclude]
+            requirements = []
+            for line in f:
+                line = line.strip()
+                # 跳过空行、纯注释行、选项行
+                if not line or line.startswith(('#', '-')):
+                    continue
+                # 去掉行尾的注释（# 后面的内容），并去除空格
+                pkg = line.split('#')[0].strip()
+                if pkg:
+                    requirements.append(pkg)
     elif isinstance(requirements, str):
         requirements = [requirements]
 
@@ -400,8 +406,14 @@ def check_requirements(requirements=ROOT / 'requirements.txt', exclude=(), insta
     n = 0
     for r in requirements:
         try:
-            pkg.require(r)
-        except (pkg.VersionConflict, pkg.DistributionNotFound):  # exception if requirements not met
+            req = Requirement(r)
+            try:
+                dist_version = importlib.metadata.version(req.name)
+            except importlib.metadata.PackageNotFoundError:
+                raise
+            if req.specifier and dist_version not in req.specifier:
+                raise Exception(f"Version mismatch")
+        except (Exception, importlib.metadata.PackageNotFoundError):
             s += f'"{r}" '
             n += 1
 

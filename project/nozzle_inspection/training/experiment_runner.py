@@ -27,6 +27,7 @@
 """
 
 import sys
+import threading
 from dataclasses import dataclass
 import subprocess
 
@@ -78,8 +79,10 @@ class ExperimentRunner:
             - 用于调试和记录实验命令
         
         执行模式说明：
-            - 使用 subprocess.run() 执行命令
-            - 捕获 stdout 和 stderr
+            - 使用 subprocess.Popen() 执行命令
+            - 实时流式输出 stdout 和 stderr（逐行打印）
+            - 使用线程同时读取 stdout 和 stderr，避免管道死锁
+            - 同时收集完整输出到 ExperimentResult
             - 返回退出码
         
         示例：
@@ -116,19 +119,49 @@ class ExperimentRunner:
                 stderr=""
             )
 
-        # 实际执行命令
-        completed = subprocess.run(
-            resolved_command,  # 使用解析后的命令（替换了 python 路径）
-            cwd=cwd,           # 工作目录
-            text=True,         # 输出为文本模式
-            capture_output=True,  # 捕获 stdout 和 stderr
-            check=False,       # 不抛出异常，返回退出码
-            encoding="utf-8"   # 显式指定编码，避免 Windows 上的编码问题
+        # 实际执行命令（实时流式输出）
+        process = subprocess.Popen(
+            resolved_command,
+            cwd=cwd,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+            bufsize=1,  # 行缓冲，确保实时输出
         )
-        
+
+        # 使用线程同时读取 stdout 和 stderr，避免死锁
+        def read_stream(stream, output_list, print_func):
+            for line in iter(stream.readline, ""):
+                line = line.rstrip("\n\r")
+                print_func(line)
+                output_list.append(line)
+            stream.close()
+
+        stdout_lines: list[str] = []
+        stderr_lines: list[str] = []
+
+        stdout_thread = threading.Thread(
+            target=read_stream,
+            args=(process.stdout, stdout_lines, print),
+            daemon=True,
+        )
+        stderr_thread = threading.Thread(
+            target=read_stream,
+            args=(process.stderr, stderr_lines, lambda x: print(x, file=sys.stderr)),
+            daemon=True,
+        )
+
+        stdout_thread.start()
+        stderr_thread.start()
+        stdout_thread.join()
+        stderr_thread.join()
+
+        returncode = process.wait()
+
         return ExperimentResult(
             command=command,
-            returncode=completed.returncode,
-            stdout=completed.stdout,
-            stderr=completed.stderr,
+            returncode=returncode,
+            stdout="\n".join(stdout_lines),
+            stderr="\n".join(stderr_lines),
         )

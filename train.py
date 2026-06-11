@@ -489,7 +489,7 @@ def main(opt, callbacks=Callbacks()):
     # Checks
     if RANK in {-1, 0}:
         print_args(vars(opt))
-        check_git_status()
+        # check_git_status()  # 网络受限环境下跳过 git 检查，避免 git fetch 超时卡住
         check_requirements()
 
     # Resume (from specified or most recent last.pt)

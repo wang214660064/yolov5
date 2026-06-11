@@ -64,7 +64,7 @@ class RunConfig:
     # 数据地址
     data_path_full = r"project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_v1"
     data_path_small = r"project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_downsampled"
-    data_path = data_path_small
+    data_path = data_path_full
 
     # 动作选择：指定要执行的操作
     action: str = "train"
@@ -83,7 +83,7 @@ class RunConfig:
 
     # 实验流程第4步：训练配置
     dry_run: bool = False           # 是否只打印命令不执行
-    epochs: int = 2                 # 训练轮数，默认2轮（测试用），实际训练建议50轮
+    epochs: int = 50                 # 训练轮数，默认50轮，实际训练建议50轮
     data_yaml: Path = Path("project/nozzle_inspection/configs/dataset.yaml")  # 数据配置文件
     hyp_yaml: Path = Path("project/nozzle_inspection/configs/train_ng_ok.yaml")  # 超参数配置文件
 
