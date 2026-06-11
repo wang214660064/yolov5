@@ -61,18 +61,22 @@ class RunConfig:
         report_output: Markdown 报告输出路径
         pptx_output: PPTX 汇报文件输出路径
     """
+    # 数据地址
+    data_path_full = r"project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_v1"
+    data_path_small = r"project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_downsampled"
+    data_path = data_path_small
 
     # 动作选择：指定要执行的操作
-    action: str = "val"
+    action: str = "train"
 
     # 实验流程第1步：数据准备配置
-    dataset_root: Path = Path("../dataset_2")  # 原始数据集目录
-    generated_dataset_root: Path = Path("project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_v1")  # 处理后数据集输出目录
+    dataset_root: Path = Path(data_path)  # "../dataset_2" 原始数据集目录
+    generated_dataset_root: Path = Path(data_path)  # 处理后数据集输出目录
     val_ratio: float = 0.2          # 验证集占比（0.2 表示 20%）
     split_seed: int = 42            # 随机种子，确保划分结果可重复
 
     # 实验流程第2步：数据分析配置
-    dataset_report: Path = Path("project/nozzle_inspection/outputs/dataset_report.md")  # 分析报告路径
+    dataset_report: Path = Path(data_path + "/dataset_report.md")  # 分析报告路径
 
     # 实验流程第3步：生成数据配置
     generated_dataset_yaml: Path = Path("project/nozzle_inspection/configs/dataset.yaml")  # 生成的配置文件
@@ -88,8 +92,8 @@ class RunConfig:
     conf: float = 0.7               # 置信度阈值，过滤低置信度检测结果
 
     # 实验流程第6步：报告输出配置
-    report_output: Path = Path("project/nozzle_inspection/outputs/reports/nozzle_report.md")  # Markdown 报告路径
-    pptx_output: Path = Path("project/nozzle_inspection/outputs/reports/nozzle_report.pptx")  # PPTX 报告路径
+    report_output: Path = Path(data_path + "/reports/nozzle_report.md")  # Markdown 报告路径
+    pptx_output: Path = Path(data_path + "/reports/nozzle_report.pptx")  # PPTX 报告路径
 
 
 # 默认配置实例，运行脚本时会读取此配置

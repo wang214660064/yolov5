@@ -122,7 +122,8 @@ class ExperimentRunner:
             cwd=cwd,           # 工作目录
             text=True,         # 输出为文本模式
             capture_output=True,  # 捕获 stdout 和 stderr
-            check=False        # 不抛出异常，返回退出码
+            check=False,       # 不抛出异常，返回退出码
+            encoding="utf-8"   # 显式指定编码，避免 Windows 上的编码问题
         )
         
         return ExperimentResult(

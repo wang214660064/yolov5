@@ -16,7 +16,12 @@
 """
 
 import argparse
+import os
 from pathlib import Path
+
+# 设置 UTF-8 编码环境变量，解决 Windows 上 subprocess 的编码问题
+os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["PYTHONUTF8"] = "1"
 
 # 导入项目各模块（相对导入）
 from .data.dataset_analyzer import DatasetAnalyzer
@@ -59,9 +64,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     # 数据分析子命令配置（实验流程第2步）
     analyze = subparsers.add_parser("analyze-data", help="分析数据集并生成 Markdown 报告")
-    analyze.add_argument("--dataset", default="../dataset_2", 
+    analyze.add_argument("--dataset", default="project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_v1", 
                          help="待分析的数据集根目录")
-    analyze.add_argument("--output", default="project/nozzle_inspection/data/dataset_report.md", 
+    analyze.add_argument("--output", default="project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_v1/dataset_report.md", 
                          help="数据分析报告输出路径")
 
     # 配置生成子命令配置（实验流程第3步）

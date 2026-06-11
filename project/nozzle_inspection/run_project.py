@@ -22,8 +22,13 @@
 2. 直接运行脚本：python project/nozzle_inspection/run_project.py
 """
 
+import os
 import sys
 from pathlib import Path
+
+# 设置 UTF-8 编码环境变量，解决 Windows 上 subprocess 的编码问题
+os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["PYTHONUTF8"] = "1"
 
 # 支持相对导入和直接运行两种方式
 try:
