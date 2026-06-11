@@ -29,8 +29,27 @@ from .data.dataset_preparer import DatasetPreparer
 from .factories.evaluator_factory import EvaluatorFactory
 from .factories.model_factory import ModelFactory
 from .factories.trainer_factory import TrainerFactory
-from .reporting.report_builder import ReportBuilder
 from .training.experiment_runner import ExperimentRunner
+
+
+def detect_device() -> str:
+    """
+    集中检测可用设备
+    
+    返回值：
+        str: 设备标识，"0" 表示第一个GPU，"cpu" 表示CPU
+    """
+    try:
+        import torch
+        if torch.cuda.is_available():
+            device_name = torch.cuda.get_device_name(0)
+            print(f"检测到 GPU: {device_name}")
+            return "0"  # 使用第一个GPU
+        print("未检测到 GPU，使用 CPU")
+        return "cpu"
+    except ImportError:
+        print("PyTorch 未安装，使用 CPU")
+        return "cpu"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -141,6 +160,11 @@ def main(argv: list[str] | None = None) -> int:
     #   - 等等...根据不同的子命令有不同的属性
     args = parser.parse_args(argv)
 
+    # ========== 集中设备检测 ==========
+    # 在需要 GPU 的操作之前统一检测设备
+    # 训练和验证都需要使用 GPU，因此提前检测一次即可
+    device = detect_device()
+
     # 实验流程第1步：准备数据集（去重、转换标签、划分）
     if args.command == "prepare-data":
         report = DatasetPreparer(
@@ -174,8 +198,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # 实验流程第4步：执行训练命令
     if args.command == "train":
-        # 创建训练器工厂，构建训练命令
-        command = TrainerFactory(repo_root=Path.cwd()).build_train_command(
+        # 创建训练器工厂，构建训练命令（传递设备参数）
+        command = TrainerFactory(repo_root=Path.cwd(), device=device).build_train_command(
             data_yaml=Path(args.data),
             hyp_yaml=Path(args.hyp),
             epochs=args.epochs,
@@ -189,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # 实验流程第5步：执行验证命令
     if args.command == "val":
-        command = EvaluatorFactory().build_val_command(
+        command = EvaluatorFactory(device=device).build_val_command(
             Path(args.data), 
             Path(args.weights), 
             conf=args.conf

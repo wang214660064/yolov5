@@ -7,16 +7,17 @@
 - 构建完整的验证命令列表
 - 支持自定义置信度阈值和 IoU 阈值
 - 默认输出详细信息
+- 支持指定验证设备
 
 使用示例：
-    factory = EvaluatorFactory()
+    factory = EvaluatorFactory(device="0")
     command = factory.build_val_command(
         data_yaml=Path("configs/dataset.yaml"),
         weights=Path("runs/train/exp/weights/best.pt"),
         conf=0.7
     )
     # 生成的命令类似：
-    # python val.py --data configs/dataset.yaml --weights runs/train/exp/weights/best.pt ...
+    # python val.py --data configs/dataset.yaml --weights runs/train/exp/weights/best.pt --device 0 ...
 """
 
 from dataclasses import dataclass
@@ -31,6 +32,7 @@ class EvaluatorFactory:
     属性：
         imgsz: 输入图像尺寸，默认 640
         iou: IoU（交并比）阈值，默认 0.45
+        device: 验证设备（"0" 表示GPU，"cpu" 表示CPU）
     
     方法：
         build_val_command(): 构建验证命令
@@ -38,6 +40,7 @@ class EvaluatorFactory:
 
     imgsz: int = 640      # 输入图像尺寸
     iou: float = 0.45     # IoU 阈值，用于 NMS（非极大值抑制）
+    device: str = "cpu"   # 验证设备
 
     def build_val_command(self, data_yaml: Path, weights: Path, conf: float = 0.25) -> list[str]:
         """
@@ -53,11 +56,12 @@ class EvaluatorFactory:
         
         生成的命令格式：
             python val.py --data configs/dataset.yaml --weights runs/train/exp/weights/best.pt 
-            --imgsz 640 --conf-thres 0.25 --iou-thres 0.45 --verbose
+            --imgsz 640 --conf-thres 0.25 --iou-thres 0.45 --device 0 --verbose
         
         关键参数说明：
             --conf-thres: 置信度阈值，低于此值的检测结果会被过滤
             --iou-thres: IoU 阈值，用于非极大值抑制
+            --device: 训练设备（GPU/CPU）
             --verbose: 输出详细信息
         
         示例：
@@ -81,5 +85,7 @@ class EvaluatorFactory:
             str(conf),
             "--iou-thres",                 # 指定 IoU 阈值
             str(self.iou),
+            "--device",                    # 指定验证设备
+            self.device,
             "--verbose",                   # 输出详细信息
         ]

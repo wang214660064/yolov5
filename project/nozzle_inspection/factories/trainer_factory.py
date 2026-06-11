@@ -7,16 +7,17 @@
 - 构建完整的训练命令列表
 - 支持自定义权重、配置、批次大小等参数
 - 默认使用 AdamW 优化器
+- 支持指定训练设备
 
 使用示例：
-    factory = TrainerFactory(repo_root=Path.cwd())
+    factory = TrainerFactory(repo_root=Path.cwd(), device="0")
     command = factory.build_train_command(
         data_yaml=Path("configs/dataset.yaml"),
         hyp_yaml=Path("configs/hyp.yaml"),
         epochs=50
     )
     # 生成的命令类似：
-    # python train.py --weights yolov5s.pt --cfg models/yolov5s.yaml ...
+    # python train.py --weights yolov5s.pt --cfg models/yolov5s.yaml --device 0 ...
 """
 
 from dataclasses import dataclass
@@ -35,6 +36,7 @@ class TrainerFactory:
         imgsz: 输入图像尺寸，默认 640
         batch_size: 批次大小，默认 8
         optimizer: 优化器类型，默认 AdamW
+        device: 训练设备（"0" 表示GPU，"cpu" 表示CPU）
     
     方法：
         build_train_command(): 构建训练命令
@@ -46,6 +48,7 @@ class TrainerFactory:
     imgsz: int = 640                  # 输入图像尺寸
     batch_size: int = 8               # 批次大小
     optimizer: str = "AdamW"          # 优化器
+    device: str = "cpu"               # 训练设备
 
     def build_train_command(
         self,
@@ -101,6 +104,8 @@ class TrainerFactory:
             str(self.imgsz),
             "--optimizer",                 # 指定优化器
             self.optimizer,
+            "--device",                    # 指定训练设备
+            self.device,
             "--project",                   # 指定输出目录
             project,
             "--name",                      # 指定实验名称
