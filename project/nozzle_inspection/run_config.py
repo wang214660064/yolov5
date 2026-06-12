@@ -69,7 +69,7 @@ class RunConfig:
     val_ratio: float = 0.2          # 验证集占比（0.2 表示 20%）
     split_seed: int = 42            # 随机种子，确保划分结果可重复
     ssim_threshold: float = 0.85     # SSIM 相似度阈值，大于等于该值认为是视觉相似重复
-    phash_threshold: int = 4         # pHash 汉明距离阈值，小于等于该值才进入 SSIM 二次确认
+    phash_threshold: int = 5         # pHash 汉明距离阈值，小于等于该值才进入 SSIM 二次确认
     deduplicate_workers: int = 0     # 去重阶段工作进程数，0 表示自动；如机器卡顿可改为 4 或 2
 
     # 实验流程第2步：数据分析配置
