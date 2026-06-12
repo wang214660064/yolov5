@@ -3,6 +3,7 @@ import unittest
 
 from project.nozzle_inspection.factories.trainer_factory import TrainerFactory
 from project.nozzle_inspection.factories.model_factory import ModelFactory
+from project.nozzle_inspection.factories.evaluator_factory import EvaluatorFactory
 
 
 class FactoriesTest(unittest.TestCase):
@@ -31,6 +32,18 @@ class FactoriesTest(unittest.TestCase):
         self.assertIn("nc: 2", yaml_text)
         self.assertIn("0: NG", yaml_text)
         self.assertIn("1: OK", yaml_text)
+
+    def test_evaluator_command_can_target_test_split(self):
+        command = EvaluatorFactory(device="0").build_val_command(
+            data_yaml=Path("project/nozzle_inspection/configs/dataset.yaml"),
+            weights=Path("runs/train/exp/weights/best.pt"),
+            conf=0.7,
+            task="test",
+        )
+
+        self.assertIn("--task", command)
+        task_index = command.index("--task")
+        self.assertEqual(command[task_index + 1], "test")
 
 
 if __name__ == "__main__":

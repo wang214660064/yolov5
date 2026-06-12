@@ -108,6 +108,8 @@ def build_argv(config: RunConfig) -> list[str]:
         # 如果是试运行模式，添加 --dry-run 参数
         if config.dry_run:
             argv.append("--dry-run")
+        if config.enable_augmentation:
+            argv.append("--enable-augmentation")
         return argv
 
     # 实验流程第5步：构建验证命令参数
@@ -120,6 +122,8 @@ def build_argv(config: RunConfig) -> list[str]:
             _path(config.weights),
             "--conf",
             str(config.conf),
+            "--task",
+            config.eval_task,
         ]
 
     # 实验流程第6步：构建生成报告命令参数

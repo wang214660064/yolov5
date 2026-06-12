@@ -1,5 +1,4 @@
-# path: project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_v1 # 原始数据集
-path: project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_downsampled # 0.05采样后的数据集
+path: ../out_cross_hash_clean
 train: images/train
 val: images/val
 test: images/test

@@ -1,8 +1,8 @@
 """
-运行配置模块 - 脚本式配置管理
+运行配置模块 - 脚本式配置管理。
 
-该模块定义了项目运行所需的所有配置参数，使用 dataclass 装饰器使其更加简洁。
-用户只需修改 CONFIG 实例的属性值，即可配置整个项目的运行行为，无需手动拼接命令行参数。
+用户只需要修改本文件中的 CONFIG/RunConfig 字段，再运行固定入口
+`conda run -n yolov5 python run_nozzle_project.py` 即可。
 """
 
 from dataclasses import dataclass
@@ -12,88 +12,57 @@ from pathlib import Path
 @dataclass(frozen=True)
 class RunConfig:
     """
-    运行配置类，用于存储项目运行的所有参数
-    
-    使用 @dataclass(frozen=True) 装饰器使其成为不可变对象，保证配置的稳定性。
-    字段按实验流程顺序排列。
-    
-    主要字段说明：
-        action: 要执行的操作，按实验流程可选值包括：
-                - prepare_data: 准备数据集（实验流程第1步）
-                - analyze_data: 分析数据集（实验流程第2步）
-                - write_config: 生成数据配置文件（实验流程第3步）
-                - train: 训练模型（实验流程第4步）
-                - val: 验证模型（实验流程第5步）
-                - report: 生成报告（实验流程第6步）
-        
-        # 实验流程第1步：数据准备配置
-        dataset_root: 原始数据集根目录路径
-        generated_dataset_root: 处理后的数据集输出目录
-        val_ratio: 验证集占比
-        split_seed: 数据集划分的随机种子
-        ssim_threshold: SSIM 相似去重阈值
-        phash_threshold: pHash 汉明距离阈值
-        deduplicate_workers: 去重阶段工作进程数，0 表示自动按 CPU 和任务量选择
-        
-        # 实验流程第2步：数据分析配置
-        dataset_report: 数据集分析报告输出路径
-        
-        # 实验流程第3步：生成数据配置
-        generated_dataset_yaml: 生成的数据配置文件输出路径
-        
-        # 实验流程第4步：训练配置
-        dry_run: 是否为试运行模式（只打印命令，不实际执行）
-        epochs: 训练轮数
-        data_yaml: YOLO 数据配置文件路径
-        hyp_yaml: 训练超参数配置文件路径
-        
-        # 实验流程第5步：验证配置
-        weights: 待验证的模型权重文件路径
-        conf: 置信度阈值
-        
-        # 实验流程第6步：报告配置
-        report_output: Markdown 报告输出路径
-        pptx_output: PPTX 汇报文件输出路径
+    项目运行配置。
+
+    action 可选：
+    - prepare_data: 数据准备
+    - analyze_data: 数据分析
+    - write_config: 生成 dataset.yaml
+    - train: 训练模型
+    - val: 训练后评估模型，可通过 eval_task 选择 val 或 test
+    - report: 生成报告
     """
-    # 数据地址
-    data_path_full = r"project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_v1"
+
+    # 数据地址。当前推荐 EXP002 baseline 使用 out_cross_hash_clean。
+    data_path_full = r"../out_cross_hash_clean"
     data_path_small = r"project/nozzle_inspection/outputs/datasets/nozzle_ng_ok_downsampled"
     data_path = data_path_full
 
-    # 动作选择：指定要执行的操作
-    action: str = "prepare_data"
+    # 动作选择。
+    action: str = "val"
 
-    # 实验流程第1步：数据准备配置
-    dataset_root: Path = Path("../dataset_2")  # "../dataset_2" 原始数据集目录
-    generated_dataset_root: Path = Path(data_path)  # 处理后数据集输出目录
-    val_ratio: float = 0.2          # 验证集占比（0.2 表示 20%）
-    split_seed: int = 42            # 随机种子，确保划分结果可重复
-    ssim_threshold: float = 0.85     # SSIM 相似度阈值，大于等于该值认为是视觉相似重复
-    phash_threshold: int = 5         # pHash 汉明距离阈值，小于等于该值才进入 SSIM 二次确认
-    deduplicate_workers: int = 0     # 去重阶段工作进程数，0 表示自动；如机器卡顿可改为 4 或 2
+    # 数据准备配置。
+    dataset_root: Path = Path("../dataset_2")
+    generated_dataset_root: Path = Path(data_path)
+    val_ratio: float = 0.2
+    split_seed: int = 42
+    ssim_threshold: float = 0.85
+    phash_threshold: int = 5
+    deduplicate_workers: int = 0
 
-    # 实验流程第2步：数据分析配置
-    dataset_report: Path = Path(data_path + "/dataset_report.md")  # 分析报告路径
+    # 数据分析配置。
+    dataset_report: Path = Path(data_path + "/dataset_report.md")
 
-    # 实验流程第3步：生成数据配置
-    generated_dataset_yaml: Path = Path("project/nozzle_inspection/configs/dataset.yaml")  # 生成的配置文件
+    # dataset.yaml 生成配置。
+    generated_dataset_yaml: Path = Path("project/nozzle_inspection/configs/dataset.yaml")
 
-    # 实验流程第4步：训练配置
-    dry_run: bool = False           # 是否只打印命令不执行
-    epochs: int = 20                 # 训练轮数，默认10轮，实际训练建议50轮
-    data_yaml: Path = Path("project/nozzle_inspection/configs/dataset.yaml")  # 数据配置文件
-    hyp_yaml: Path = Path("project/nozzle_inspection/configs/train_ng_ok.yaml")  # 超参数配置文件
-    workers: int = 6                 # DataLoader 工作进程数，0 表示单进程加载（Windows 兼容性好）
+    # 训练配置。
+    dry_run: bool = False
+    epochs: int = 20
+    data_yaml: Path = Path("project/nozzle_inspection/configs/dataset.yaml")
+    hyp_yaml: Path = Path("project/nozzle_inspection/configs/train_ng_ok.yaml")
+    workers: int = 2
+    enable_augmentation: bool = False
 
-    # 实验流程第5步：验证配置
-    weights: Path = Path("runs/train/nozzle_ng_ok7/weights/best.pt")  # 模型权重文件
-    conf: float = 0.7               # 置信度阈值，过滤低置信度检测结果
+    # 训练后评估配置。
+    # eval_task="val" 表示评估验证集；eval_task="test" 表示评估测试集。
+    weights: Path = Path("runs/train/nozzle_ng_ok4/weights/best.pt")
+    conf: float = 0.25 # 分别跑 conf=0.25 / 0.5 / 0.7验证集的AP
+    eval_task: str = "val"
 
-    # 实验流程第6步：报告输出配置
-    report_output: Path = Path(data_path + "/reports/nozzle_report.md")  # Markdown 报告路径
-    pptx_output: Path = Path(data_path + "/reports/nozzle_report.pptx")  # PPTX 报告路径
+    # 报告输出配置。
+    report_output: Path = Path(data_path + "/reports/nozzle_report.md")
+    pptx_output: Path = Path(data_path + "/reports/nozzle_report.pptx")
 
 
-# 默认配置实例，运行脚本时会读取此配置
-# 用户只需修改这个配置实例的属性值即可，无需手动拼接命令行参数
 CONFIG = RunConfig()

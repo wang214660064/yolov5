@@ -19,6 +19,8 @@ import argparse
 import os
 from pathlib import Path
 
+import yaml
+
 # 设置 UTF-8 编码环境变量，解决 Windows 上 subprocess 的编码问题
 os.environ["PYTHONIOENCODING"] = "utf-8"
 os.environ["PYTHONUTF8"] = "1"
@@ -30,6 +32,46 @@ from .factories.evaluator_factory import EvaluatorFactory
 from .factories.model_factory import ModelFactory
 from .factories.trainer_factory import TrainerFactory
 from .training.experiment_runner import ExperimentRunner
+
+
+AUGMENTATION_HYP_KEYS = (
+    "hsv_h",
+    "hsv_s",
+    "hsv_v",
+    "degrees",
+    "translate",
+    "scale",
+    "shear",
+    "perspective",
+    "flipud",
+    "fliplr",
+    "mosaic",
+    "mixup",
+    "copy_paste",
+)
+
+
+def resolve_training_hyp(hyp_yaml: Path, enable_augmentation: bool) -> Path:
+    """
+    根据总开关生成训练实际使用的超参数文件。
+
+    enable_augmentation=False 时，不覆盖用户手写 hyp，而是生成一份增强项全为 0 的临时配置；
+    enable_augmentation=True 时，直接使用用户指定的 hyp 文件，让各增强强度由 hyp 控制。
+    """
+    if enable_augmentation:
+        return hyp_yaml
+
+    hyp = yaml.safe_load(hyp_yaml.read_text(encoding="utf-8")) or {}
+    for key in AUGMENTATION_HYP_KEYS:
+        hyp[key] = 0.0
+
+    output_path = Path("project/nozzle_inspection/outputs/configs/train_no_augment.yaml")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        yaml.safe_dump(hyp, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    return output_path
 
 
 def detect_device() -> str:
@@ -109,6 +151,8 @@ def build_parser() -> argparse.ArgumentParser:
                        help="训练超参数配置文件路径")
     train.add_argument("--epochs", type=int, default=50, help="训练轮数，默认50轮")
     train.add_argument("--workers", type=int, default=8, help="DataLoader 工作进程数，默认8，Windows 建议使用0")
+    train.add_argument("--enable-augmentation", action="store_true",
+                       help="开启训练数据增强；不传该参数时会把 hyp 中的增强项全部置 0")
     train.add_argument("--dry-run", action="store_true", 
                        help="仅打印训练命令，不实际执行训练（用于调试）")
 
@@ -119,6 +163,8 @@ def build_parser() -> argparse.ArgumentParser:
     val.add_argument("--weights", required=True, help="待验证的模型权重文件路径")
     val.add_argument("--conf", type=float, default=0.25, 
                      help="置信度阈值，用于过滤检测结果，默认0.25")
+    val.add_argument("--task", choices=("val", "test"), default="val",
+                     help="评估数据划分，val表示验证集，test表示测试集")
 
     # 报告生成子命令配置（实验流程第6步）
     report = subparsers.add_parser("report", help="生成 Markdown 和可选 PPT 汇报")
@@ -214,9 +260,10 @@ def main(argv: list[str] | None = None) -> int:
     # 实验流程第4步：执行训练命令
     if args.command == "train":
         # 创建训练器工厂，构建训练命令（传递设备参数和 workers 参数）
+        hyp_yaml = resolve_training_hyp(Path(args.hyp), args.enable_augmentation)
         command = TrainerFactory(repo_root=Path.cwd(), device=device).build_train_command(
             data_yaml=Path(args.data),
-            hyp_yaml=Path(args.hyp),
+            hyp_yaml=hyp_yaml,
             epochs=args.epochs,
             workers=args.workers,
         )
@@ -232,10 +279,14 @@ def main(argv: list[str] | None = None) -> int:
         command = EvaluatorFactory(device=device).build_val_command(
             Path(args.data), 
             Path(args.weights), 
-            conf=args.conf
+            conf=args.conf,
+            task=args.task,
         )
-        print(" ".join(command))
-        return 0
+        result = ExperimentRunner().run(command, cwd=str(Path.cwd()))
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
+        return result.returncode
 
     # 实验流程第6步：生成报告
     if args.command == "report":

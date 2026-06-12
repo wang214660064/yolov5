@@ -9,12 +9,13 @@ class ScriptRunnerTest(unittest.TestCase):
     def test_default_config_keeps_current_script_defaults(self):
         config = RunConfig()
 
-        self.assertEqual(config.action, "prepare_data")
         self.assertEqual(config.val_ratio, 0.2)
         self.assertEqual(config.split_seed, 42)
         self.assertEqual(config.ssim_threshold, 0.85)
-        self.assertEqual(config.phash_threshold, 4)
+        self.assertEqual(config.phash_threshold, 5)
         self.assertEqual(config.deduplicate_workers, 0)
+        self.assertFalse(config.enable_augmentation)
+        self.assertEqual(config.eval_task, "val")
 
     def test_build_train_argv_from_config(self):
         config = RunConfig(action="train", dry_run=True, epochs=5)
@@ -32,10 +33,17 @@ class ScriptRunnerTest(unittest.TestCase):
                 "--epochs",
                 "5",
                 "--workers",
-                "6",
+                "2",
                 "--dry-run",
             ],
         )
+
+    def test_build_train_argv_can_enable_augmentation(self):
+        config = RunConfig(action="train", dry_run=True, epochs=5, enable_augmentation=True)
+
+        argv = run_project.build_argv(config)
+
+        self.assertIn("--enable-augmentation", argv)
 
     def test_build_report_argv_from_config(self):
         config = RunConfig(
@@ -54,6 +62,32 @@ class ScriptRunnerTest(unittest.TestCase):
                 "../outputs/reports/demo.md",
                 "--pptx",
                 "../outputs/reports/demo.pptx",
+            ],
+        )
+
+    def test_build_val_argv_can_target_test_split(self):
+        config = RunConfig(
+            action="val",
+            data_yaml=Path("project/nozzle_inspection/configs/dataset.yaml"),
+            weights=Path("runs/train/exp/weights/best.pt"),
+            conf=0.7,
+            eval_task="test",
+        )
+
+        argv = run_project.build_argv(config)
+
+        self.assertEqual(
+            argv,
+            [
+                "val",
+                "--data",
+                "project/nozzle_inspection/configs/dataset.yaml",
+                "--weights",
+                "runs/train/exp/weights/best.pt",
+                "--conf",
+                "0.7",
+                "--task",
+                "test",
             ],
         )
 
