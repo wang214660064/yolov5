@@ -80,6 +80,12 @@ def build_parser() -> argparse.ArgumentParser:
                          help="验证集占比，默认0.2（20%）")
     prepare.add_argument("--seed", type=int, default=42, 
                          help="随机种子，用于确保数据集划分结果可重复")
+    prepare.add_argument("--ssim-threshold", type=float, default=0.85,
+                         help="SSIM 相似去重阈值，默认0.85")
+    prepare.add_argument("--phash-threshold", type=int, default=4,
+                         help="pHash 汉明距离阈值，默认4，越小越严格")
+    prepare.add_argument("--deduplicate-workers", type=int, default=0,
+                         help="去重阶段工作进程数，0表示自动按CPU和任务量选择")
 
     # 数据分析子命令配置（实验流程第2步）
     analyze = subparsers.add_parser("analyze-data", help="分析数据集并生成 Markdown 报告")
@@ -102,6 +108,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--hyp", default="project/nozzle_inspection/configs/train_ng_ok.yaml", 
                        help="训练超参数配置文件路径")
     train.add_argument("--epochs", type=int, default=50, help="训练轮数，默认50轮")
+    train.add_argument("--workers", type=int, default=8, help="DataLoader 工作进程数，默认8，Windows 建议使用0")
     train.add_argument("--dry-run", action="store_true", 
                        help="仅打印训练命令，不实际执行训练（用于调试）")
 
@@ -172,9 +179,17 @@ def main(argv: list[str] | None = None) -> int:
             output_root=Path(args.output),
             val_ratio=args.val_ratio,
             seed=args.seed,
+            ssim_threshold=args.ssim_threshold,
+            phash_threshold=args.phash_threshold,
+            deduplicate_workers=args.deduplicate_workers,
         ).prepare()
         print(f"数据准备完成：{report.output_root}")
-        print(f"候选样本：{report.total_candidates}，重复样本：{report.duplicate_count}")
+        print(
+            f"候选样本：{report.total_candidates}，"
+            f"精确重复：{report.exact_duplicate_count}，"
+            f"SSIM相似重复：{report.similar_duplicate_count}，"
+            f"总重复：{report.duplicate_count}"
+        )
         print(f"训练集：{report.train_count}，验证集：{report.val_count}，测试集：{report.test_count}")
         return 0
 
@@ -198,11 +213,12 @@ def main(argv: list[str] | None = None) -> int:
 
     # 实验流程第4步：执行训练命令
     if args.command == "train":
-        # 创建训练器工厂，构建训练命令（传递设备参数）
+        # 创建训练器工厂，构建训练命令（传递设备参数和 workers 参数）
         command = TrainerFactory(repo_root=Path.cwd(), device=device).build_train_command(
             data_yaml=Path(args.data),
             hyp_yaml=Path(args.hyp),
             epochs=args.epochs,
+            workers=args.workers,
         )
         # 运行训练命令
         result = ExperimentRunner().run(command, dry_run=args.dry_run, cwd=str(Path.cwd()))

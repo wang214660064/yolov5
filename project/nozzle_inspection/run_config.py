@@ -3,15 +3,6 @@
 
 该模块定义了项目运行所需的所有配置参数，使用 dataclass 装饰器使其更加简洁。
 用户只需修改 CONFIG 实例的属性值，即可配置整个项目的运行行为，无需手动拼接命令行参数。
-
-配置项按实验流程分为以下几类：
-1. 动作选择：指定要执行的操作
-2. 数据准备配置：数据集去重、转换标签、划分相关参数（实验流程第1步）
-3. 数据分析配置：数据集分析和报告生成相关参数（实验流程第2步）
-4. 生成数据配置：生成 YOLO 数据配置文件相关参数（实验流程第3步）
-5. 训练配置：模型训练相关参数（实验流程第4步）
-6. 验证配置：模型验证相关参数（实验流程第5步）
-7. 报告配置：项目报告输出相关参数（实验流程第6步）
 """
 
 from dataclasses import dataclass
@@ -40,6 +31,9 @@ class RunConfig:
         generated_dataset_root: 处理后的数据集输出目录
         val_ratio: 验证集占比
         split_seed: 数据集划分的随机种子
+        ssim_threshold: SSIM 相似去重阈值
+        phash_threshold: pHash 汉明距离阈值
+        deduplicate_workers: 去重阶段工作进程数，0 表示自动按 CPU 和任务量选择
         
         # 实验流程第2步：数据分析配置
         dataset_report: 数据集分析报告输出路径
@@ -67,13 +61,16 @@ class RunConfig:
     data_path = data_path_full
 
     # 动作选择：指定要执行的操作
-    action: str = "train"
+    action: str = "prepare_data"
 
     # 实验流程第1步：数据准备配置
-    dataset_root: Path = Path(data_path)  # "../dataset_2" 原始数据集目录
+    dataset_root: Path = Path("../dataset_2")  # "../dataset_2" 原始数据集目录
     generated_dataset_root: Path = Path(data_path)  # 处理后数据集输出目录
     val_ratio: float = 0.2          # 验证集占比（0.2 表示 20%）
     split_seed: int = 42            # 随机种子，确保划分结果可重复
+    ssim_threshold: float = 0.85     # SSIM 相似度阈值，大于等于该值认为是视觉相似重复
+    phash_threshold: int = 4         # pHash 汉明距离阈值，小于等于该值才进入 SSIM 二次确认
+    deduplicate_workers: int = 0     # 去重阶段工作进程数，0 表示自动；如机器卡顿可改为 4 或 2
 
     # 实验流程第2步：数据分析配置
     dataset_report: Path = Path(data_path + "/dataset_report.md")  # 分析报告路径
@@ -83,9 +80,10 @@ class RunConfig:
 
     # 实验流程第4步：训练配置
     dry_run: bool = False           # 是否只打印命令不执行
-    epochs: int = 50                 # 训练轮数，默认50轮，实际训练建议50轮
+    epochs: int = 20                 # 训练轮数，默认10轮，实际训练建议50轮
     data_yaml: Path = Path("project/nozzle_inspection/configs/dataset.yaml")  # 数据配置文件
     hyp_yaml: Path = Path("project/nozzle_inspection/configs/train_ng_ok.yaml")  # 超参数配置文件
+    workers: int = 6                 # DataLoader 工作进程数，0 表示单进程加载（Windows 兼容性好）
 
     # 实验流程第5步：验证配置
     weights: Path = Path("runs/train/nozzle_ng_ok7/weights/best.pt")  # 模型权重文件

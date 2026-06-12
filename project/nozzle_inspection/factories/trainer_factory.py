@@ -55,6 +55,7 @@ class TrainerFactory:
         data_yaml: Path,
         hyp_yaml: Path,
         epochs: int,
+        workers: int = 8,
         project: str = "runs/train",
         name: str = "nozzle_ng_ok",
     ) -> list[str]:
@@ -65,6 +66,7 @@ class TrainerFactory:
             data_yaml: 数据集配置文件路径
             hyp_yaml: 超参数配置文件路径
             epochs: 训练轮数
+            workers: DataLoader 工作进程数，默认8，Windows 建议使用0
             project: 训练结果输出目录，默认 runs/train
             name: 实验名称，默认 nozzle_ng_ok
         
@@ -75,6 +77,7 @@ class TrainerFactory:
             python train.py --weights yolov5s.pt --cfg models/yolov5s.yaml 
             --data configs/dataset.yaml --hyp configs/hyp.yaml 
             --epochs 50 --batch-size 8 --imgsz 640 --optimizer AdamW 
+            --workers 0 --device 0
             --project runs/train --name nozzle_ng_ok
         
         示例：
@@ -82,7 +85,8 @@ class TrainerFactory:
             cmd = factory.build_train_command(
                 data_yaml=Path("configs/dataset.yaml"),
                 hyp_yaml=Path("configs/hyp.yaml"),
-                epochs=30
+                epochs=30,
+                workers=0
             )
         """
         return [
@@ -104,6 +108,8 @@ class TrainerFactory:
             str(self.imgsz),
             "--optimizer",                 # 指定优化器
             self.optimizer,
+            "--workers",                   # 指定 DataLoader 工作进程数
+            str(workers),
             "--device",                    # 指定训练设备
             self.device,
             "--project",                   # 指定输出目录

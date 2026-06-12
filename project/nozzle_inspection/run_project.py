@@ -1,25 +1,9 @@
 """
 运行项目模块 - 脚本式运行入口
-
-该模块提供了一个简化的项目运行方式，通过配置类 RunConfig 来驱动项目执行，
-无需手动拼接复杂的命令行参数。
-
 核心功能：
 1. 将 RunConfig 配置转换为命令行参数列表
 2. 调用 main 函数执行相应操作
 3. 提供统一的运行入口
-
-按实验流程支持的操作：
-1. prepare_data: 准备数据集
-2. analyze_data: 分析数据集
-3. write_config: 生成数据配置
-4. train: 训练模型
-5. val: 验证模型
-6. report: 生成报告
-
-支持两种运行方式：
-1. 作为模块运行：python -m project.nozzle_inspection.run_project
-2. 直接运行脚本：python project/nozzle_inspection/run_project.py
 """
 
 import os
@@ -80,6 +64,12 @@ def build_argv(config: RunConfig) -> list[str]:
             str(config.val_ratio),
             "--seed",
             str(config.split_seed),
+            "--ssim-threshold",
+            str(config.ssim_threshold),
+            "--phash-threshold",
+            str(config.phash_threshold),
+            "--deduplicate-workers",
+            str(config.deduplicate_workers),
         ]
 
     # 实验流程第2步：构建数据分析命令参数
@@ -112,6 +102,8 @@ def build_argv(config: RunConfig) -> list[str]:
             _path(config.hyp_yaml),
             "--epochs",
             str(config.epochs),
+            "--workers",
+            str(config.workers),
         ]
         # 如果是试运行模式，添加 --dry-run 参数
         if config.dry_run:
