@@ -7,7 +7,6 @@
 3. 生成数据配置文件（write-config）：生成 YOLO 数据配置
 4. 训练 YOLOv5 模型（train）：训练目标检测模型
 5. 验证模型性能（val）：验证训练好的模型
-6. 生成项目报告（report）：生成 Markdown 和 PPT 汇报
 
 使用示例：
     python main.py prepare-data --dataset ../dataset_2 --output ../outputs/datasets/nozzle_ng_ok_v1
@@ -104,7 +103,6 @@ def build_parser() -> argparse.ArgumentParser:
     - write-config: 生成数据配置
     - train: 训练模型
     - val: 验证模型
-    - report: 生成报告
     
     返回值：
         argparse.ArgumentParser: 配置好的参数解析器
@@ -151,8 +149,11 @@ def build_parser() -> argparse.ArgumentParser:
                        help="训练超参数配置文件路径")
     train.add_argument("--epochs", type=int, default=50, help="训练轮数，默认50轮")
     train.add_argument("--workers", type=int, default=8, help="DataLoader 工作进程数，默认8，Windows 建议使用0")
+    train.add_argument("--batch-size", type=int, default=16, help="批次大小，根据显存调整（16/32/64），默认16")
     train.add_argument("--enable-augmentation", action="store_true",
                        help="开启训练数据增强；不传该参数时会把 hyp 中的增强项全部置 0")
+    train.add_argument("--name", default=None,
+                       help="训练输出文件夹名称；不填时使用 YOLOv5 默认 nozzle_ng_ok 并自动递增")
     train.add_argument("--dry-run", action="store_true", 
                        help="仅打印训练命令，不实际执行训练（用于调试）")
 
@@ -165,13 +166,9 @@ def build_parser() -> argparse.ArgumentParser:
                      help="置信度阈值，用于过滤检测结果，默认0.25")
     val.add_argument("--task", choices=("val", "test"), default="val",
                      help="评估数据划分，val表示验证集，test表示测试集")
+    val.add_argument("--name", default=None,
+                     help="验证输出文件夹名称；不填时使用 YOLOv5 默认 exp 并自动递增")
 
-    # 报告生成子命令配置（实验流程第6步）
-    report = subparsers.add_parser("report", help="生成 Markdown 和可选 PPT 汇报")
-    report.add_argument("--output", default="project/nozzle_inspection/outputs/reports/nozzle_report.md", 
-                        help="Markdown 报告输出路径")
-    report.add_argument("--pptx", default="project/nozzle_inspection/outputs/reports/nozzle_report.pptx", 
-                        help="PPTX 汇报文件输出路径")
     return parser
 
 
@@ -191,7 +188,6 @@ def main(argv: list[str] | None = None) -> int:
         write-config: 生成数据配置（实验流程第3步）
         train: 训练模型（实验流程第4步）
         val: 验证模型（实验流程第5步）
-        report: 生成报告（实验流程第6步）
     """
     # ========== 参数解析 ==========
     # 第1步：创建命令行参数解析器
@@ -261,11 +257,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "train":
         # 创建训练器工厂，构建训练命令（传递设备参数和 workers 参数）
         hyp_yaml = resolve_training_hyp(Path(args.hyp), args.enable_augmentation)
-        command = TrainerFactory(repo_root=Path.cwd(), device=device).build_train_command(
+        command = TrainerFactory(repo_root=Path.cwd(), device=device, batch_size=args.batch_size).build_train_command(
             data_yaml=Path(args.data),
             hyp_yaml=hyp_yaml,
             epochs=args.epochs,
             workers=args.workers,
+            name=args.name or "nozzle_ng_ok",
         )
         # 运行训练命令
         result = ExperimentRunner().run(command, dry_run=args.dry_run, cwd=str(Path.cwd()))
@@ -281,24 +278,13 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.weights), 
             conf=args.conf,
             task=args.task,
+            name=args.name or "exp",
         )
         result = ExperimentRunner().run(command, cwd=str(Path.cwd()))
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
         return result.returncode
-
-    # 实验流程第6步：生成报告
-    if args.command == "report":
-        builder = ReportBuilder()
-        markdown_path = builder.write_markdown(Path(args.output))
-        pptx_path = builder.write_pptx(Path(args.pptx))
-        print(f"Markdown 报告已生成：{markdown_path}")
-        if pptx_path:
-            print(f"PPT 汇报已生成：{pptx_path}")
-        else:
-            print("当前环境缺少 python-pptx，已跳过 PPT 汇报生成。")
-        return 0
 
     # 未知命令处理
     parser.error("未知命令")

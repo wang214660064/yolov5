@@ -1,6 +1,6 @@
 # 3D 打印机喷头检测项目
 
-基于 YOLOv5 的 3D 打印机喷头缺陷检测（NG/OK 分类）项目，提供完整的数据处理、模型训练、验证和报告生成流程。
+基于 YOLOv5 的 3D 打印机喷头缺陷检测（NG/OK 分类）项目，提供完整的数据处理、模型训练和验证流程。
 
 ## 🚀 功能特点
 
@@ -8,7 +8,6 @@
 - **数据预处理**：去重、标签转换、数据集划分
 - **模型训练**：基于 YOLOv5 的端到端训练流程
 - **模型验证**：自动评估模型性能
-- **报告生成**：生成 Markdown 和 PPT 格式的项目汇报
 
 ## 📁 项目结构
 
@@ -17,7 +16,6 @@ project/nozzle_inspection/
 ├── configs/              # 配置文件
 │   ├── augmentation.yaml # 数据增强配置
 │   ├── dataset.yaml      # 数据集配置
-│   ├── report.yaml       # 报告生成配置
 │   └── train_ng_ok.yaml  # 训练超参数
 ├── data/                 # 数据处理模块
 │   ├── dataset_analyzer.py    # 数据集分析器
@@ -34,10 +32,7 @@ project/nozzle_inspection/
 │   ├── data_factory.py
 │   ├── evaluator_factory.py
 │   ├── model_factory.py
-│   ├── report_factory.py
 │   └── trainer_factory.py
-├── reporting/            # 报告生成
-│   └── report_builder.py
 ├── training/             # 训练模块
 │   └── experiment_runner.py
 ├── utils/                # 工具模块
@@ -60,20 +55,22 @@ pip install -r yolov5/requirements.txt
 
 ## 📖 使用方法
 
-### 方式一：命令行模式（推荐）
+### 方式一：命令行模式
 
 从 `yolov5` 目录运行：
 
 ```bash
-conda run -n yolov5 python -m project.nozzle_inspection.main --help
+conda activate yolov5
+python -m project.nozzle_inspection.main --help
 ```
 
-### 方式二：脚本模式
+### 方式二：脚本模式（推荐）
 
 修改 `run_config.py` 中的配置后运行：
 
 ```bash
-conda run -n yolov5 python project/nozzle_inspection/run_project.py
+conda activate yolov5
+python -u run_nozzle_project.py
 ```
 
 ## 📋 命令参考
@@ -122,20 +119,12 @@ python -m project.nozzle_inspection.main val \
   --conf 0.25
 ```
 
-### 6. 生成报告
-
-```bash
-python -m project.nozzle_inspection.main report \
-  --output ../outputs/reports/nozzle_report.md \
-  --pptx ../outputs/reports/nozzle_report.pptx
-```
-
 ## 🔄 工作流程
 
 ```
-1. 数据分析 → 2. 数据准备 → 3. 生成配置 → 4. 训练 → 5. 验证 → 6. 生成报告
-    ↓              ↓              ↓           ↓         ↓           ↓
-analyze-data   prepare-data   write-config   train     val        report
+1. 数据分析 → 2. 数据准备 → 3. 生成配置 → 4. 训练 → 5. 验证
+    ↓              ↓              ↓           ↓         ↓
+analyze-data   prepare-data   write-config   train     val
 ```
 
 ## ⚙️ 配置说明
@@ -167,9 +156,6 @@ outputs/
 │           ├── train/
 │           ├── val/
 │           └── test/
-└── reports/
-    ├── nozzle_report.md    # Markdown 报告
-    └── nozzle_report.pptx  # PPT 汇报
 ```
 
 ## 🚀 快速开始
@@ -177,21 +163,19 @@ outputs/
 ```bash
 # 进入项目目录
 cd "E:\Desktop\MAC-WIN\04 OpenCV\98_Practice\3DPrinterNozzleInspection\yolov5"
+conda activate yolov5
 
 # 分析数据集
-conda run -n yolov5 python -m project.nozzle_inspection.main analyze-data
+python -m project.nozzle_inspection.main analyze-data
 
 # 准备数据
-conda run -n yolov5 python -m project.nozzle_inspection.main prepare-data
+python -m project.nozzle_inspection.main prepare-data
 
 # 生成配置
-conda run -n yolov5 python -m project.nozzle_inspection.main write-config
+python -m project.nozzle_inspection.main write-config
 
 # 训练模型
-conda run -n yolov5 python -m project.nozzle_inspection.main train --epochs 50
-
-# 生成报告
-conda run -n yolov5 python -m project.nozzle_inspection.main report
+python -u -m project.nozzle_inspection.main train --epochs 50
 ```
 
 ## 📝 许可证

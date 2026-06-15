@@ -8,7 +8,6 @@
     - DataFactory: 数据处理组件工厂（标签转换、去重）
     - EvaluatorFactory: YOLOv5 验证命令工厂
     - ModelFactory: YOLOv5 配置生成工厂
-    - ReportFactory: 报告生成组件工厂
     - TrainerFactory: YOLOv5 训练命令工厂
 
 使用示例：
@@ -27,7 +26,6 @@ from .augmentation_factory import AugmentationFactory
 from .data_factory import DataFactory
 from .evaluator_factory import EvaluatorFactory
 from .model_factory import ModelFactory
-from .report_factory import ReportFactory
 from .trainer_factory import TrainerFactory
 
 # 导出所有工厂类
@@ -36,6 +34,5 @@ __all__ = [
     "DataFactory",
     "EvaluatorFactory",
     "ModelFactory",
-    "ReportFactory",
     "TrainerFactory",
 ]

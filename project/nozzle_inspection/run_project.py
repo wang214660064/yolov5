@@ -49,7 +49,6 @@ def build_argv(config: RunConfig) -> list[str]:
         write_config: 生成数据配置（实验流程第3步）
         train: 训练模型（实验流程第4步）
         val: 验证模型（实验流程第5步）
-        report: 生成报告（实验流程第6步）
     """
 
     # 实验流程第1步：构建数据准备命令参数
@@ -104,17 +103,21 @@ def build_argv(config: RunConfig) -> list[str]:
             str(config.epochs),
             "--workers",
             str(config.workers),
+            "--batch-size",
+            str(config.batch_size),
         ]
         # 如果是试运行模式，添加 --dry-run 参数
         if config.dry_run:
             argv.append("--dry-run")
         if config.enable_augmentation:
             argv.append("--enable-augmentation")
+        if config.train_name:
+            argv.extend(["--name", config.train_name])
         return argv
 
     # 实验流程第5步：构建验证命令参数
     if config.action == "val":
-        return [
+        argv = [
             "val",
             "--data",
             _path(config.data_yaml),
@@ -125,16 +128,9 @@ def build_argv(config: RunConfig) -> list[str]:
             "--task",
             config.eval_task,
         ]
-
-    # 实验流程第6步：构建生成报告命令参数
-    if config.action == "report":
-        return [
-            "report",
-            "--output",
-            _path(config.report_output),
-            "--pptx",
-            _path(config.pptx_output),
-        ]
+        if config.val_name:
+            argv.extend(["--name", config.val_name])
+        return argv
 
     # 如果 action 值不在支持列表中，抛出异常
     raise ValueError(f"未知运行动作：{config.action}")

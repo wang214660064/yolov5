@@ -1,7 +1,0 @@
-title: 3D打印机喷头检测项目报告
-markdown_output: project/nozzle_inspection/outputs/reports/nozzle_report.md
-pptx_output: project/nozzle_inspection/outputs/reports/nozzle_report.pptx
-thresholds:
-  - 0.25
-  - 0.5
-  - 0.7

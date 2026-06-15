@@ -45,6 +45,21 @@ class FactoriesTest(unittest.TestCase):
         task_index = command.index("--task")
         self.assertEqual(command[task_index + 1], "test")
 
+    def test_evaluator_command_can_use_custom_output_name(self):
+        command = EvaluatorFactory(device="0").build_val_command(
+            data_yaml=Path("project/nozzle_inspection/configs/dataset.yaml"),
+            weights=Path("runs/train/exp/weights/best.pt"),
+            conf=0.25,
+            task="val",
+            project="runs/val",
+            name="EXP003_val_conf025",
+        )
+
+        self.assertIn("--project", command)
+        self.assertIn("--name", command)
+        self.assertEqual(command[command.index("--project") + 1], "runs/val")
+        self.assertEqual(command[command.index("--name") + 1], "EXP003_val_conf025")
+
 
 if __name__ == "__main__":
     unittest.main()

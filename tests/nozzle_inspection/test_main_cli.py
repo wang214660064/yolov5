@@ -32,6 +32,12 @@ class MainCliTest(unittest.TestCase):
         self.assertEqual(args.command, "analyze-data")
         self.assertEqual(args.dataset, "../dataset_2")
 
+    def test_parser_rejects_removed_report_command(self):
+        parser = build_parser()
+
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["report"])
+
     def test_val_command_executes_yolov5_val_script(self):
         result = ExperimentResult(
             command=["python", "val.py"],

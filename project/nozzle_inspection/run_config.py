@@ -2,11 +2,15 @@
 运行配置模块 - 脚本式配置管理。
 
 用户只需要修改本文件中的 CONFIG/RunConfig 字段，再运行固定入口
-`conda run -n yolov5 python run_nozzle_project.py` 即可。
+`python -u run_nozzle_project.py` 即可。
+
+运行前请先在 PowerShell 中进入 yolov5 目录并激活环境：
+`conda activate yolov5`
 """
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -20,7 +24,6 @@ class RunConfig:
     - write_config: 生成 dataset.yaml
     - train: 训练模型
     - val: 训练后评估模型，可通过 eval_task 选择 val 或 test
-    - report: 生成报告
     """
 
     # 数据地址。当前推荐 EXP002 baseline 使用 out_cross_hash_clean。
@@ -48,21 +51,22 @@ class RunConfig:
 
     # 训练配置。
     dry_run: bool = False
-    epochs: int = 20
+    epochs: int = 50
     data_yaml: Path = Path("project/nozzle_inspection/configs/dataset.yaml")
     hyp_yaml: Path = Path("project/nozzle_inspection/configs/train_ng_ok.yaml")
+    batch_size: int = 32  # 批次大小，根据显存调整（16/32/64）
     workers: int = 2
     enable_augmentation: bool = False
+    # 训练输出文件夹名称。None 或 "" 表示使用 YOLOv5 默认名称 nozzle_ng_ok，并自动递增。
+    train_name: Optional[str] = "nozzle_ng_ok-无增强"
 
     # 训练后评估配置。
     # eval_task="val" 表示评估验证集；eval_task="test" 表示评估测试集。
-    weights: Path = Path("runs/train/nozzle_ng_ok4/weights/best.pt")
-    conf: float = 0.25 # 分别跑 conf=0.25 / 0.5 / 0.7验证集的AP
+    weights: Path = Path("runs/train/"+train_name+"/weights/best.pt")
+    conf: float = 0.7 # 分别跑 conf=0.25 / 0.5 / 0.7验证集的AP
     eval_task: str = "val"
-
-    # 报告输出配置。
-    report_output: Path = Path(data_path + "/reports/nozzle_report.md")
-    pptx_output: Path = Path(data_path + "/reports/nozzle_report.pptx")
+    # 验证输出文件夹名称。None 或 "" 表示使用 YOLOv5 默认 exp，并自动递增。
+    val_name: Optional[str]= f"{train_name}/exp-conf-{conf}" if train_name else None
 
 
 CONFIG = RunConfig()

@@ -4,7 +4,6 @@ import unittest
 from project.nozzle_inspection.factories.data_factory import DataFactory
 from project.nozzle_inspection.factories.augmentation_factory import AugmentationFactory
 from project.nozzle_inspection.factories.evaluator_factory import EvaluatorFactory
-from project.nozzle_inspection.factories.report_factory import ReportFactory
 from project.nozzle_inspection.training.experiment_runner import ExperimentRunner
 
 
@@ -13,7 +12,6 @@ class PipelineEntriesTest(unittest.TestCase):
         self.assertIsNotNone(DataFactory().create_label_converter())
         self.assertIsNotNone(DataFactory().create_deduplicator())
         self.assertTrue(callable(AugmentationFactory().create_box_scaler()))
-        self.assertIsNotNone(ReportFactory().create_report_builder())
 
     def test_evaluator_command_contains_threshold(self):
         command = EvaluatorFactory().build_val_command(

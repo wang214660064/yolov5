@@ -42,7 +42,15 @@ class EvaluatorFactory:
     iou: float = 0.45     # IoU 阈值，用于 NMS（非极大值抑制）
     device: str = "cpu"   # 验证设备
 
-    def build_val_command(self, data_yaml: Path, weights: Path, conf: float = 0.25, task: str = "val") -> list[str]:
+    def build_val_command(
+        self,
+        data_yaml: Path,
+        weights: Path,
+        conf: float = 0.25,
+        task: str = "val",
+        project: str = "runs/val",
+        name: str = "exp",
+    ) -> list[str]:
         """
         构建 YOLOv5 验证命令
         
@@ -89,5 +97,9 @@ class EvaluatorFactory:
             str(self.iou),
             "--device",                    # 指定验证设备
             self.device,
+            "--project",                   # 指定验证输出根目录
+            str(project).replace("\\", "/"),
+            "--name",                      # 指定验证输出文件夹名称
+            name,
             "--verbose",                   # 输出详细信息
         ]

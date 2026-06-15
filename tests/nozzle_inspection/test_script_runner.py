@@ -18,7 +18,7 @@ class ScriptRunnerTest(unittest.TestCase):
         self.assertEqual(config.eval_task, "val")
 
     def test_build_train_argv_from_config(self):
-        config = RunConfig(action="train", dry_run=True, epochs=5)
+        config = RunConfig(action="train", dry_run=True, epochs=5, train_name=None)
 
         argv = run_project.build_argv(config)
 
@@ -45,25 +45,14 @@ class ScriptRunnerTest(unittest.TestCase):
 
         self.assertIn("--enable-augmentation", argv)
 
-    def test_build_report_argv_from_config(self):
-        config = RunConfig(
-            action="report",
-            report_output=Path("../outputs/reports/demo.md"),
-            pptx_output=Path("../outputs/reports/demo.pptx"),
-        )
+    def test_build_train_argv_can_use_custom_output_name(self):
+        config = RunConfig(action="train", dry_run=True, epochs=5, train_name="EXP003_no_aug")
 
         argv = run_project.build_argv(config)
 
-        self.assertEqual(
-            argv,
-            [
-                "report",
-                "--output",
-                "../outputs/reports/demo.md",
-                "--pptx",
-                "../outputs/reports/demo.pptx",
-            ],
-        )
+        self.assertIn("--name", argv)
+        name_index = argv.index("--name")
+        self.assertEqual(argv[name_index + 1], "EXP003_no_aug")
 
     def test_build_val_argv_can_target_test_split(self):
         config = RunConfig(
@@ -72,6 +61,7 @@ class ScriptRunnerTest(unittest.TestCase):
             weights=Path("runs/train/exp/weights/best.pt"),
             conf=0.7,
             eval_task="test",
+            val_name=None,
         )
 
         argv = run_project.build_argv(config)
@@ -90,6 +80,22 @@ class ScriptRunnerTest(unittest.TestCase):
                 "test",
             ],
         )
+
+    def test_build_val_argv_can_use_custom_output_name(self):
+        config = RunConfig(
+            action="val",
+            data_yaml=Path("project/nozzle_inspection/configs/dataset.yaml"),
+            weights=Path("runs/train/exp/weights/best.pt"),
+            conf=0.25,
+            eval_task="val",
+            val_name="EXP003_val_conf025",
+        )
+
+        argv = run_project.build_argv(config)
+
+        self.assertIn("--name", argv)
+        name_index = argv.index("--name")
+        self.assertEqual(argv[name_index + 1], "EXP003_val_conf025")
 
     def test_build_prepare_data_argv_from_config(self):
         config = RunConfig(
