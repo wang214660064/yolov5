@@ -60,6 +60,20 @@ class FactoriesTest(unittest.TestCase):
         self.assertEqual(command[command.index("--project") + 1], "runs/val")
         self.assertEqual(command[command.index("--name") + 1], "EXP003_val_conf025")
 
+    def test_evaluator_command_can_save_predictions_for_error_review(self):
+        command = EvaluatorFactory(device="0").build_val_command(
+            data_yaml=Path("project/nozzle_inspection/configs/dataset.yaml"),
+            weights=Path("runs/train/exp/weights/best.pt"),
+            conf=0.25,
+            save_txt=True,
+            save_conf=True,
+            save_json=True,
+        )
+
+        self.assertIn("--save-txt", command)
+        self.assertIn("--save-conf", command)
+        self.assertIn("--save-json", command)
+
 
 if __name__ == "__main__":
     unittest.main()

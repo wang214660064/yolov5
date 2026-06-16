@@ -30,6 +30,7 @@ from .data.dataset_preparer import DatasetPreparer
 from .factories.evaluator_factory import EvaluatorFactory
 from .factories.model_factory import ModelFactory
 from .factories.trainer_factory import TrainerFactory
+from .evaluation.error_sample_exporter import ErrorSampleExporter
 from .training.experiment_runner import ExperimentRunner
 
 
@@ -164,10 +165,22 @@ def build_parser() -> argparse.ArgumentParser:
     val.add_argument("--weights", required=True, help="待验证的模型权重文件路径")
     val.add_argument("--conf", type=float, default=0.25, 
                      help="置信度阈值，用于过滤检测结果，默认0.25")
-    val.add_argument("--task", choices=("val", "test"), default="val",
-                     help="评估数据划分，val表示验证集，test表示测试集")
+    val.add_argument("--task", choices=("train", "val", "test"), default="val",
+                     help="评估数据划分，train表示训练集复查，val表示验证集，test表示测试集")
     val.add_argument("--name", default=None,
                      help="验证输出文件夹名称；不填时使用 YOLOv5 默认 exp 并自动递增")
+    val.add_argument("--save-txt", action="store_true",
+                     help="保存预测框 txt，错误样本复查建议开启")
+    val.add_argument("--save-conf", action="store_true",
+                     help="在预测 txt 中保存置信度，需要配合 --save-txt 使用")
+    val.add_argument("--save-json", action="store_true",
+                     help="保存 COCO JSON 格式预测结果")
+    val.add_argument("--export-error-samples", action="store_true",
+                     help="验证结束后按漏检、误检、类别错误复制错误样本到 runs 目录")
+    val.add_argument("--error-samples-dir", default=None,
+                     help="错误样本输出根目录；不填时默认 runs/<task>/BadCase")
+    val.add_argument("--error-iou-thres", type=float, default=0.5,
+                     help="错误样本匹配 IoU 阈值，默认0.5")
 
     return parser
 
@@ -279,16 +292,83 @@ def main(argv: list[str] | None = None) -> int:
             conf=args.conf,
             task=args.task,
             name=args.name or "exp",
+            save_txt=args.save_txt,
+            save_conf=args.save_conf,
+            save_json=args.save_json,
         )
         result = ExperimentRunner().run(command, cwd=str(Path.cwd()))
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
+        if result.returncode == 0 and args.export_error_samples:
+            if not args.save_txt:
+                print("未开启 --save-txt，无法导出错误样本；请开启 save_txt 后重新验证。")
+                return result.returncode
+            val_save_dir = _resolve_val_save_dir(result.stdout, project="runs/val", name=args.name or "exp")
+            error_samples_dir = Path(args.error_samples_dir or f"runs/{args.task}/BadCase")
+            summary = ErrorSampleExporter(
+                data_yaml=Path(args.data),
+                task=args.task,
+                val_save_dir=val_save_dir,
+                output_root=error_samples_dir,
+                iou_threshold=args.error_iou_thres,
+            ).export()
+            print(
+                "错误样本已导出："
+                f"{error_samples_dir / val_save_dir.relative_to('runs/val') if _is_relative_to(val_save_dir, Path('runs/val')) else error_samples_dir / val_save_dir.name}"
+            )
+            print(
+                f"漏检：{summary['missed_target']}，"
+                f"误检：{summary['false_alarm']}，"
+                f"类别错误：{summary['class_error']}，"
+                f"涉及图片：{summary['images_with_errors']}"
+            )
         return result.returncode
 
     # 未知命令处理
     parser.error("未知命令")
     return 2
+
+
+def _resolve_val_save_dir(stdout: str, project: str, name: str) -> Path:
+    """
+    从 YOLOv5 val.py 输出中解析真实保存目录。
+
+    当 YOLO 自动递增 exp2/exp3 时，stdout 中的 Results saved to 更可靠；
+    解析失败时回退到 project/name。
+    """
+    for line in stdout.splitlines():
+        if "Results saved to" not in line:
+            continue
+        raw_path = line.split("Results saved to", 1)[1].strip()
+        raw_path = raw_path.split(" labels saved to ", 1)[0].strip()
+        raw_path = _strip_ansi(raw_path)
+        if raw_path:
+            return Path(raw_path)
+    return Path(project) / name
+
+
+def _strip_ansi(text: str) -> str:
+    result = ""
+    index = 0
+    while index < len(text):
+        if text[index] == "\x1b":
+            end = text.find("m", index)
+            if end == -1:
+                break
+            index = end + 1
+            continue
+        result += text[index]
+        index += 1
+    return result
+
+
+def _is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        path.relative_to(base)
+        return True
+    except ValueError:
+        return False
 
 
 if __name__ == "__main__":

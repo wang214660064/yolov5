@@ -60,6 +60,8 @@ class MainCliTest(unittest.TestCase):
                 "0.7",
                 "--task",
                 "val",
+                "--save-txt",
+                "--save-conf",
             ])
 
         self.assertEqual(returncode, 0)
@@ -68,6 +70,55 @@ class MainCliTest(unittest.TestCase):
         self.assertIn("val.py", command)
         self.assertIn("--conf-thres", command)
         self.assertIn("0.7", command)
+        self.assertIn("--save-txt", command)
+        self.assertIn("--save-conf", command)
+
+    def test_parser_accepts_train_split_for_error_review(self):
+        parser = build_parser()
+
+        args = parser.parse_args([
+            "val",
+            "--weights",
+            "runs/train/exp/weights/best.pt",
+            "--task",
+            "train",
+            "--export-error-samples",
+        ])
+
+        self.assertEqual(args.task, "train")
+        self.assertTrue(args.export_error_samples)
+
+    def test_val_error_export_defaults_to_task_badcase_folder(self):
+        result = ExperimentResult(
+            command=["python", "val.py"],
+            returncode=0,
+            stdout="Results saved to runs/val/exp",
+            stderr="",
+        )
+
+        with patch("project.nozzle_inspection.main.detect_device", return_value="cpu"), \
+             patch("project.nozzle_inspection.main.ExperimentRunner") as runner_cls, \
+             patch("project.nozzle_inspection.main.ErrorSampleExporter") as exporter_cls:
+            runner_cls.return_value.run.return_value = result
+            exporter_cls.return_value.export.return_value = {
+                "missed_target": 0,
+                "false_alarm": 0,
+                "class_error": 0,
+                "images_with_errors": 0,
+            }
+
+            returncode = main([
+                "val",
+                "--weights",
+                "runs/train/exp/weights/best.pt",
+                "--task",
+                "train",
+                "--save-txt",
+                "--export-error-samples",
+            ])
+
+        self.assertEqual(returncode, 0)
+        self.assertEqual(exporter_cls.call_args.kwargs["output_root"], Path("runs/train/BadCase"))
 
     def test_train_disables_augmentation_by_default(self):
         result = ExperimentResult(

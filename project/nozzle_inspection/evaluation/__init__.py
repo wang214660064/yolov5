@@ -15,5 +15,6 @@
 """
 
 from .error_analyzer import ErrorAnalyzer
+from .error_sample_exporter import ErrorSampleExporter
 
-__all__ = ["ErrorAnalyzer"]
+__all__ = ["ErrorAnalyzer", "ErrorSampleExporter"]

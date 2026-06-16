@@ -50,6 +50,9 @@ class EvaluatorFactory:
         task: str = "val",
         project: str = "runs/val",
         name: str = "exp",
+        save_txt: bool = False,
+        save_conf: bool = False,
+        save_json: bool = False,
     ) -> list[str]:
         """
         构建 YOLOv5 验证命令
@@ -80,7 +83,7 @@ class EvaluatorFactory:
                 conf=0.5
             )
         """
-        return [
+        command = [
             "python",                      # Python 解释器
             "val.py",                      # YOLOv5 验证脚本
             "--data",                      # 指定数据集配置
@@ -103,3 +106,10 @@ class EvaluatorFactory:
             name,
             "--verbose",                   # 输出详细信息
         ]
+        if save_txt:
+            command.append("--save-txt")
+        if save_conf:
+            command.append("--save-conf")
+        if save_json:
+            command.append("--save-json")
+        return command

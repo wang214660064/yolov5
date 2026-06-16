@@ -23,7 +23,7 @@ class RunConfig:
     - analyze_data: 数据分析
     - write_config: 生成 dataset.yaml
     - train: 训练模型
-    - val: 训练后评估模型，可通过 eval_task 选择 val 或 test
+    - val: 训练后评估模型，可通过 eval_task 选择 train、val 或 test
     """
 
     # 数据地址。当前推荐 EXP002 baseline 使用 out_cross_hash_clean。
@@ -51,22 +51,30 @@ class RunConfig:
 
     # 训练配置。
     dry_run: bool = False
-    epochs: int = 50
+    epochs: int = 20
     data_yaml: Path = Path("project/nozzle_inspection/configs/dataset.yaml")
     hyp_yaml: Path = Path("project/nozzle_inspection/configs/train_ng_ok.yaml")
-    batch_size: int = 32  # 批次大小，根据显存调整（16/32/64）
+    batch_size: int = 16  # 批次大小，根据显存调整（16/32/64）
     workers: int = 2
-    enable_augmentation: bool = False
+    enable_augmentation: bool = True
     # 训练输出文件夹名称。None 或 "" 表示使用 YOLOv5 默认名称 nozzle_ng_ok，并自动递增。
-    train_name: Optional[str] = "nozzle_ng_ok-无增强"
+    train_name: Optional[str] = "nozzle_ng_ok-有增强-16"
 
     # 训练后评估配置。
-    # eval_task="val" 表示评估验证集；eval_task="test" 表示评估测试集。
+    # eval_task="train" 表示用验证逻辑检查训练集；"val" 表示验证集；"test" 表示测试集。
     weights: Path = Path("runs/train/"+train_name+"/weights/best.pt")
-    conf: float = 0.7 # 分别跑 conf=0.25 / 0.5 / 0.7验证集的AP
-    eval_task: str = "val"
+    conf: float = 0.5 # 分别跑 conf=0.25 / 0.5 / 0.7验证集的AP，官方默认 conf=0.001
+    eval_task: str = "train"  # 评估任务，可选 train、val、test的数据集
     # 验证输出文件夹名称。None 或 "" 表示使用 YOLOv5 默认 exp，并自动递增。
     val_name: Optional[str]= f"{train_name}/exp-conf-{conf}" if train_name else None
+    # 保存 YOLOv5 原生预测结果，错误样本复查需要 save_txt=True。
+    save_txt: bool = True
+    save_conf: bool = True
+    save_json: bool = True
+    # 导出错误样本到 runs/<eval_task>/BadCase，便于人工复查和后续报告整理。
+    export_error_samples: bool = True
+    error_iou_threshold: float = 0.5
+    error_samples_dir: Path = Path("runs/"+eval_task+"/BadCase")
 
 
 CONFIG = RunConfig()

@@ -130,6 +130,16 @@ def build_argv(config: RunConfig) -> list[str]:
         ]
         if config.val_name:
             argv.extend(["--name", config.val_name])
+        if config.save_txt:
+            argv.append("--save-txt")
+        if config.save_conf:
+            argv.append("--save-conf")
+        if config.save_json:
+            argv.append("--save-json")
+        if config.export_error_samples:
+            argv.append("--export-error-samples")
+            argv.extend(["--error-samples-dir", _path(config.error_samples_dir)])
+            argv.extend(["--error-iou-thres", str(config.error_iou_threshold)])
         return argv
 
     # 如果 action 值不在支持列表中，抛出异常
