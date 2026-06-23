@@ -106,7 +106,8 @@ class ComputeLoss:
         # Focal loss
         g = h['fl_gamma']  # focal loss gamma
         if g > 0:
-            BCEcls, BCEobj = FocalLoss(BCEcls, g), FocalLoss(BCEobj, g)
+            alpha = h.get('fl_alpha', 0.25)
+            BCEcls, BCEobj = FocalLoss(BCEcls, g, alpha), FocalLoss(BCEobj, g, alpha)
 
         m = de_parallel(model).model[-1]  # Detect() module
         self.balance = {3: [4.0, 1.0, 0.4]}.get(m.nl, [4.0, 1.0, 0.25, 0.06, 0.02])  # P3-P7 #损失函数中 不同尺度特征图的损失平衡系数，如果某些尺寸项目漏检，需要调整该系数
@@ -117,6 +118,9 @@ class ComputeLoss:
         self.nl = m.nl  # number of layers
         self.anchors = m.anchors
         self.device = device
+        self.iou_type = h.get('iou_type', 'ciou').lower()
+        if self.iou_type not in {'ciou', 'siou'}:
+            raise ValueError("iou_type 只支持 'ciou' 或 'siou'")
 
     def __call__(self, p, targets):  # predictions, targets
         lcls = torch.zeros(1, device=self.device)  # class loss
@@ -138,7 +142,12 @@ class ComputeLoss:
                 pxy = pxy.sigmoid() * 2 - 0.5
                 pwh = (pwh.sigmoid() * 2) ** 2 * anchors[i]
                 pbox = torch.cat((pxy, pwh), 1)  # predicted box
-                iou = bbox_iou(pbox, tbox[i], CIoU=True).squeeze()  # iou(prediction, target)
+                iou = bbox_iou(
+                    pbox,
+                    tbox[i],
+                    CIoU=self.iou_type == 'ciou',
+                    SIoU=self.iou_type == 'siou',
+                ).squeeze()  # iou(prediction, target)
                 lbox += (1.0 - iou).mean()  # iou loss
 
                 # Objectness

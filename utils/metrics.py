@@ -223,7 +223,7 @@ class ConfusionMatrix:
             print(' '.join(map(str, self.matrix[i])))
 
 
-def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, eps=1e-7):
+def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, SIoU=False, eps=1e-7):
     # Returns Intersection over Union (IoU) of box1(1,4) to box2(n,4)
 
     # Get the coordinates of bounding boxes
@@ -247,9 +247,27 @@ def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, eps=1e-7
 
     # IoU
     iou = inter / union
-    if CIoU or DIoU or GIoU:
+    if CIoU or DIoU or GIoU or SIoU:
         cw = torch.max(b1_x2, b2_x2) - torch.min(b1_x1, b2_x1)  # convex (smallest enclosing box) width
         ch = torch.max(b1_y2, b2_y2) - torch.min(b1_y1, b2_y1)  # convex height
+        if SIoU:
+            # SIoU: angle-aware distance cost + shape cost.
+            s_cw = (b2_x1 + b2_x2 - b1_x1 - b1_x2) / 2
+            s_ch = (b2_y1 + b2_y2 - b1_y1 - b1_y2) / 2
+            sigma = torch.sqrt(s_cw ** 2 + s_ch ** 2 + eps)
+            sin_alpha_1 = torch.abs(s_cw) / sigma
+            sin_alpha_2 = torch.abs(s_ch) / sigma
+            threshold = math.sqrt(2) / 2
+            sin_alpha = torch.where(sin_alpha_1 > threshold, sin_alpha_2, sin_alpha_1).clamp(0, 1 - eps)
+            angle_cost = torch.cos(torch.asin(sin_alpha) * 2 - math.pi / 2)
+            gamma = angle_cost - 2
+            rho_x = (s_cw / (cw + eps)) ** 2
+            rho_y = (s_ch / (ch + eps)) ** 2
+            distance_cost = 2 - torch.exp(gamma * rho_x) - torch.exp(gamma * rho_y)
+            omega_w = torch.abs(w1 - w2) / (torch.max(w1, w2) + eps)
+            omega_h = torch.abs(h1 - h2) / (torch.max(h1, h2) + eps)
+            shape_cost = (1 - torch.exp(-omega_w)) ** 4 + (1 - torch.exp(-omega_h)) ** 4
+            return iou - 0.5 * (distance_cost + shape_cost)
         if CIoU or DIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
             c2 = cw ** 2 + ch ** 2 + eps  # convex diagonal squared
             rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center dist ** 2
