@@ -64,16 +64,16 @@ class RunConfig:
     focal_gamma: float = 1.5
     focal_alpha: float = 0.25
     # 模型选择。model_weights 为预训练权重，model_cfg 为模型结构配置。
-    model_weights: str = "runs/train/nozzle_ng_ok-aug-siou/weights/best.pt"  # 可选 yolov5s.pt 或自定义路径
+    model_weights: str = "runs/train/nozzle_ng_ok-aug-focal/weights/best.pt"  # 可选 yolov5s.pt 或自定义路径
     model_cfg: str = "models/yolov5s.yaml"  # 对应 models/ 下的 yaml 配置文件
     # 训练输出文件夹名称。None 或 "" 表示使用 YOLOv5 默认名称 nozzle_ng_ok，并自动递增。
-    train_name: Optional[str] = "nozzle_ng_ok-aug-focal"
+    train_name: Optional[str] = "nozzle_ng_ok-aug-focal-continue"
 
     # 训练后评估配置。
     # eval_task="train" 表示用验证逻辑检查训练集；"val" 表示验证集；"test" 表示测试集。
     weights: Path = Path("runs/train/"+train_name+"/weights/best.pt")
     conf: float = 0.7 # 分别跑 conf=0.25 / 0.5 / 0.7验证集的AP，官方默认 conf=0.001
-    eval_task: str = "train"  # 评估任务，可选 train、val、test的数据集
+    eval_task: str = "test"  # 评估任务，可选 train、val、test的数据集
     # 验证输出文件夹名称。None 或 "" 表示使用 YOLOv5 默认 exp，并自动递增。
     val_name: Optional[str]= f"{train_name}/exp-conf-{conf}" if train_name else None
     # 保存 YOLOv5 原生预测结果，错误样本复查需要 save_txt=True。

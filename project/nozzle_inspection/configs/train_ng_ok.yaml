@@ -13,7 +13,7 @@ warmup_bias_lr: 0.1  # warmup initial bias lr
 
 # 最多+1%
 
-box: 0.05  # box loss gain CIOU位置损失，占比 位置损失不收敛，可以调大一些 0.5
+box: 0.5  # box loss gain CIOU位置损失，占比 位置损失不收敛，可以调大一些 0.5
 cls: 0.5  # cls loss gain 类别损占比 类别误检的时候调大1.5
 
 cls_pw: 1.0  # cls BCELoss positive_weight 正样本类别损失占比 nn.BCEWithLogitsLoss(pos_weight=1.0)，漏检和误检1.5
@@ -31,16 +31,16 @@ anchor_t: 4.0  # anchor-multiple threshold 不修改
 # alpha = 0.25
 # 第1轮训练， epoch = 100, 92分的时候
 # 第2轮训练时，再加focal loss才有效
-fl_gamma: 0.0  # focal loss gamma (efficientDet default gamma=1.5) focal loss系数，此项有用。面试常问
+fl_gamma: 1.5  # focal loss gamma (efficientDet default gamma=1.5) focal loss系数，此项有用。面试常问
 fl_alpha: 0.25  # focal loss 正样本权重
-iou_type: ciou  # 边界框损失，可选 ciou 或 siou
+iou_type: siou  # 边界框损失，可选 ciou 或 siou
 
 hsv_h: 0.005  # image HSV-Hue augmentation (fraction)
 hsv_s: 0.2  # image HSV-Saturation augmentation (fraction)
 hsv_v: 0.15  # image HSV-Value augmentation (fraction)
-degrees: 3  # image rotation (+/- deg) 这里一般15
+degrees: 0  # image rotation (+/- deg) 这里一般15
 translate: 0.05  # image translation (+/- fraction)
-scale: 0.2  # image scale (+/- gain) 缩放0.5
+scale: 0.5  # image scale (+/- gain) 缩放0.5
 shear: 0.0  # image shear (+/- deg) 裁剪
 perspective: 0.0  # image perspective (+/- fraction), range 0-0.001 不能设，透视变换
 flipud: 0.5  # image flip up-down (probability) 上下翻转

@@ -73,8 +73,7 @@ def visualize(error_dir: Path, output_dir: Path, config: dict):
     for gt_path in txt_files:
         stem = gt_path.stem
         pred_path = pred_dir / f"{stem}.txt"
-        if not pred_path.exists():
-            continue
+        has_pred = pred_path.exists()
 
         # 找图片
         img_candidates = list(image_dir.glob(f"{stem}.*"))
@@ -107,21 +106,23 @@ def visualize(error_dir: Path, output_dir: Path, config: dict):
 
         # 读取预测框
         pred_boxes = []
-        for line in pred_path.read_text(encoding="utf-8").strip().splitlines():
-            box = _parse_yolo_box(line, has_conf=True)
-            if box:
-                pred_boxes.append(box)
-                x1, y1, x2, y2 = _yolo_to_pixel(box["x"], box["y"], box["w"], box["h"], img_w, img_h)
-                label = CATEGORIES.get(box["cls"], str(box["cls"]))
-                conf_str = f"{box['conf']:.2f}" if box["conf"] is not None else ""
-                cv2.rectangle(canvas, (x1, y1), (x2, y2), COLOR_PRED, 2)
-                text = f"Pred:{label} {conf_str}"
-                cv2.putText(canvas, text, (x1, max(y2 + 15, 0)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLOR_PRED, 2)
+        if has_pred:
+            for line in pred_path.read_text(encoding="utf-8").strip().splitlines():
+                box = _parse_yolo_box(line, has_conf=True)
+                if box:
+                    pred_boxes.append(box)
+                    x1, y1, x2, y2 = _yolo_to_pixel(box["x"], box["y"], box["w"], box["h"], img_w, img_h)
+                    label = CATEGORIES.get(box["cls"], str(box["cls"]))
+                    conf_str = f"{box['conf']:.2f}" if box["conf"] is not None else ""
+                    cv2.rectangle(canvas, (x1, y1), (x2, y2), COLOR_PRED, 2)
+                    text = f"Pred:{label} {conf_str}"
+                    cv2.putText(canvas, text, (x1, max(y2 + 15, 0)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLOR_PRED, 2)
 
         # 添加图例（使用英文避免 OpenCV 中文显示问题）
         cv2.putText(canvas, "GT (Green)", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, COLOR_GT, 2)
-        cv2.putText(canvas, "Pred (Red)", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, COLOR_PRED, 2)
+        if has_pred:
+            cv2.putText(canvas, "Pred (Red)", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, COLOR_PRED, 2)
         cv2.putText(canvas, f"GT={len(gt_boxes)}, Pred={len(pred_boxes)}", (10, 75),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
@@ -168,7 +169,7 @@ def visualize_badcase(badcase_root: Path) -> int:
 
 def main():
     # 直接指定要处理的根目录
-    badcase_root = Path(r"E:\Desktop\MAC-WIN\04 OpenCV\98_Practice\3DPrinterNozzleInspection\yolov8\runs\val\BadCase\nozzle_ng_ok_v8-aug-continue\exp-conf-0.25")
+    badcase_root = Path(r"E:\Desktop\MAC-WIN\04 OpenCV\98_Practice\3DPrinterNozzleInspection\yolov5\runs\val\BadCase\nozzle_ng_ok-aug-focal\exp-conf-0.7")
     raise SystemExit(visualize_badcase(badcase_root))
 
 
